@@ -46,7 +46,11 @@ class MainActivity : ComponentActivity() {
                             AddCompanyScreen(navController = navController, invoiceViewModel = invoiceViewModel, companyViewModel = companyViewModel)
                         }
                         composable("settings") {
-                            SettingsScreen(navController = navController)
+                            SettingsScreen(
+                                navController = navController,
+                                isDarkTheme = isDarkTheme,
+                                onThemeChange = { settingsViewModel.setDarkTheme(it) }
+                            )
                         }
                         composable(
                             "company_details/{nip}",
