@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,33 +39,59 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+
+@Serializable
+data class CompanyQrData(
+    val type: CompanyType,
+    val nip: String,
+    val address: String,
+    val ownerFullName: String? = null,
+    val businessName: String? = null,
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompanyDetailsScreen(navController: NavController, company: Company, invoiceViewModel: InvoiceViewModel) {
     var qrCodeBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var showIconPicker by remember { mutableStateOf(false) }
+    val qrColor = MaterialTheme.colorScheme.onSurface.toArgb()
+    val qrBgColor = MaterialTheme.colorScheme.surface.toArgb()
 
-    LaunchedEffect(company) {
-        val companyJson = Json.encodeToString(company)
+    if (showIconPicker) {
+        IconPickerDialog(onDismiss = { showIconPicker = false }) { newIcon ->
+            invoiceViewModel.updateCompanyIcon(company, newIcon)
+        }
+    }
+
+    LaunchedEffect(company, qrColor, qrBgColor) {
+        val companyQrData = CompanyQrData(
+            type = company.type,
+            nip = company.nip,
+            address = company.address,
+            ownerFullName = company.ownerFullName,
+            businessName = company.businessName
+        )
+        val companyJson = Json.encodeToString(companyQrData)
         val writer = QRCodeWriter()
         try {
             val bitMatrix = writer.encode(companyJson, BarcodeFormat.QR_CODE, 512, 512)
             val width = bitMatrix.width
             val height = bitMatrix.height
-            val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
+            val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             for (x in 0 until width) {
                 for (y in 0 until height) {
-                    bmp.setPixel(x, y, if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+                    bmp.setPixel(x, y, if (bitMatrix[x, y]) qrColor else qrBgColor)
                 }
             }
             qrCodeBitmap = bmp
@@ -106,14 +133,17 @@ fun CompanyDetailsScreen(navController: NavController, company: Company, invoice
                     modifier = Modifier
                         .size(128.dp)
                         .clip(CircleShape)
-                        .background(Color.White)
+                        .background(MaterialTheme.colorScheme.background)
+                        .clickable { showIconPicker = true }
                 ) {
                     when (company.icon.type) {
                         IconType.PREDEFINED -> {
                             Icon(
                                 imageVector = IconProvider.getIcon(company.icon.iconName),
                                 contentDescription = "Ikona firmy",
-                                modifier = Modifier.fillMaxSize().padding(8.dp),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(8.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -121,7 +151,7 @@ fun CompanyDetailsScreen(navController: NavController, company: Company, invoice
                             Image(
                                 painter = rememberAsyncImagePainter(model = Uri.parse(company.icon.iconName)),
                                 contentDescription = "Ikona firmy",
-                                modifier = Modifier.fillMaxSize().padding(8.dp)
+                                modifier = Modifier.fillMaxSize()
                             )
                         }
                     }

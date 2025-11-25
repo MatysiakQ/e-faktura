@@ -10,7 +10,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -24,12 +23,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val context = LocalContext.current
-            val settingsViewModel: SettingsViewModel = viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory {
-                override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                    return SettingsViewModel(context.applicationContext) as T
-                }
-            })
+            val settingsViewModel: SettingsViewModel = viewModel()
             val isDarkTheme by settingsViewModel.isDarkTheme.collectAsState()
 
             EfakturaTheme(darkTheme = isDarkTheme) {

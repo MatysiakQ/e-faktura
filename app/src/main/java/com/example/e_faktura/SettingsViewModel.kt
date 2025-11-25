@@ -1,12 +1,13 @@
 package com.example.e_faktura
 
+import android.app.Application
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -14,10 +15,11 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+private val IS_DARK_THEME = booleanPreferencesKey("is_dark_theme")
 
-class SettingsViewModel(context: Context) : ViewModel() {
-    private val dataStore = context.dataStore
+class SettingsViewModel(application: Application) : AndroidViewModel(application) {
+    private val dataStore = application.dataStore
 
     val isDarkTheme: StateFlow<Boolean> = dataStore.data
         .map { preferences ->
@@ -35,9 +37,5 @@ class SettingsViewModel(context: Context) : ViewModel() {
                 it[IS_DARK_THEME] = isDark
             }
         }
-    }
-
-    companion object {
-        private val IS_DARK_THEME = booleanPreferencesKey("is_dark_theme")
     }
 }

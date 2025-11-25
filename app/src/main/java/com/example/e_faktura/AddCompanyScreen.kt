@@ -1,25 +1,17 @@
 package com.example.e_faktura
 
-import android.Manifest
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -37,7 +29,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
@@ -55,15 +46,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddCompanyScreen(
     navController: NavController,
@@ -81,7 +68,9 @@ fun AddCompanyScreen(
     var showIconPicker by remember { mutableStateOf(false) }
 
     if (showIconPicker) {
-        IconPickerDialog(companyViewModel) { showIconPicker = false }
+        IconPickerDialog(onDismiss = { showIconPicker = false }) { newIcon ->
+            companyViewModel.onIconChange(newIcon)
+        }
     }
 
     Scaffold(
@@ -107,7 +96,7 @@ fun AddCompanyScreen(
             Spacer(modifier = Modifier.height(24.dp))
             Box(modifier = Modifier.clickable { showIconPicker = true }) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    IconSelection(companyViewModel)
+                    IconSelection(companyViewModel.icon)
                     Text("Kliknij, aby zmienić ikonę", style = MaterialTheme.typography.bodySmall)
                 }
             }
@@ -209,7 +198,7 @@ private fun CompanyTypeSelection(companyViewModel: CompanyViewModel) {
 }
 
 @Composable
-private fun IconSelection(companyViewModel: CompanyViewModel) {
+private fun IconSelection(icon: CompanyIcon) {
     Box(
         modifier = Modifier
             .size(128.dp)
@@ -217,76 +206,24 @@ private fun IconSelection(companyViewModel: CompanyViewModel) {
             .background(MaterialTheme.colorScheme.surface),
         contentAlignment = Alignment.Center
     ) {
-        when (companyViewModel.icon.type) {
+        when (icon.type) {
             IconType.PREDEFINED -> {
                 Icon(
-                    imageVector = IconProvider.getIcon(companyViewModel.icon.iconName),
+                    imageVector = IconProvider.getIcon(icon.iconName),
                     contentDescription = "Ikona firmy",
-                    modifier = Modifier.fillMaxSize().padding(16.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
 
             IconType.CUSTOM -> {
                 Image(
-                    painter = rememberAsyncImagePainter(model = Uri.parse(companyViewModel.icon.iconName)),
+                    painter = rememberAsyncImagePainter(model = Uri.parse(icon.iconName)),
                     contentDescription = "Ikona firmy",
                     modifier = Modifier.fillMaxSize()
                 )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalPermissionsApi::class)
-@Composable
-private fun IconPickerDialog(companyViewModel: CompanyViewModel, onDismiss: () -> Unit) {
-    val galleryPermissionState = rememberPermissionState(permission = Manifest.permission.READ_EXTERNAL_STORAGE)
-    val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-        onResult = { uri ->
-            if (uri != null) {
-                companyViewModel.onIconChange(CompanyIcon(IconType.CUSTOM, uri.toString()))
-                onDismiss()
-            }
-        }
-    )
-    Dialog(onDismissRequest = onDismiss) {
-        Card {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(text = "Wybierz ikonę", style = MaterialTheme.typography.titleLarge)
-                Spacer(modifier = Modifier.height(16.dp))
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 80.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(IconProvider.icons.keys.toList()) { iconName ->
-                        Icon(
-                            imageVector = IconProvider.getIcon(iconName),
-                            contentDescription = iconName,
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clickable {
-                                    companyViewModel.onIconChange(CompanyIcon(IconType.PREDEFINED, iconName))
-                                    onDismiss()
-                                }
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedButton(
-                    onClick = { 
-                        if (galleryPermissionState.status.isGranted) {
-                            galleryLauncher.launch("image/*") 
-                        } else {
-                            galleryPermissionState.launchPermissionRequest()
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Wybierz z galerii")
-                }
             }
         }
     }
