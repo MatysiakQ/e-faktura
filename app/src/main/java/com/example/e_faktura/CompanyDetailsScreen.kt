@@ -1,20 +1,22 @@
 package com.example.e_faktura
 
 import android.graphics.Bitmap
-import android.graphics.Color
+import android.net.Uri
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
@@ -35,10 +37,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import kotlinx.serialization.encodeToString
@@ -46,7 +51,7 @@ import kotlinx.serialization.json.Json
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CompanyDetailsScreen(navController: NavController, company: Company) {
+fun CompanyDetailsScreen(navController: NavController, company: Company, invoiceViewModel: InvoiceViewModel) {
     var qrCodeBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
     LaunchedEffect(company) {
@@ -59,7 +64,7 @@ fun CompanyDetailsScreen(navController: NavController, company: Company) {
             val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
             for (x in 0 until width) {
                 for (y in 0 until height) {
-                    bmp.setPixel(x, y, if (bitMatrix[x, y]) Color.BLACK else Color.WHITE)
+                    bmp.setPixel(x, y, if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
                 }
             }
             qrCodeBitmap = bmp
@@ -76,6 +81,14 @@ fun CompanyDetailsScreen(navController: NavController, company: Company) {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Wróć")
                     }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        invoiceViewModel.deleteCompany(company)
+                        navController.popBackStack()
+                    }) {
+                        Icon(Icons.Filled.Delete, contentDescription = "Usuń")
+                    }
                 }
             )
         }
@@ -88,6 +101,32 @@ fun CompanyDetailsScreen(navController: NavController, company: Company) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .size(128.dp)
+                        .clip(CircleShape)
+                        .background(Color.White)
+                ) {
+                    when (company.icon.type) {
+                        IconType.PREDEFINED -> {
+                            Icon(
+                                imageVector = IconProvider.getIcon(company.icon.iconName),
+                                contentDescription = "Ikona firmy",
+                                modifier = Modifier.fillMaxSize().padding(8.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        IconType.CUSTOM -> {
+                            Image(
+                                painter = rememberAsyncImagePainter(model = Uri.parse(company.icon.iconName)),
+                                contentDescription = "Ikona firmy",
+                                modifier = Modifier.fillMaxSize().padding(8.dp)
+                            )
+                        }
+                    }
+                }
+            }
             item {
                 qrCodeBitmap?.let {
                     Card(elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {

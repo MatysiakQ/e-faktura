@@ -11,6 +11,7 @@ class CompanyViewModel : ViewModel() {
     var businessName by mutableStateOf("")
     var nip by mutableStateOf("")
     var address by mutableStateOf("")
+    var icon by mutableStateOf(CompanyIcon(IconType.PREDEFINED, "Business"))
 
     fun onCompanyTypeChange(newType: CompanyType) {
         companyType = newType
@@ -32,13 +33,18 @@ class CompanyViewModel : ViewModel() {
         address = newAddress
     }
 
+    fun onIconChange(newIcon: CompanyIcon) {
+        icon = newIcon
+    }
+
     fun saveCompany(): Company {
         return Company(
             type = companyType,
             nip = nip,
             address = address,
             ownerFullName = if (companyType == CompanyType.SOLE_PROPRIETORSHIP) ownerFullName else null,
-            businessName = if (companyType == CompanyType.FIRM) businessName else null
+            businessName = if (companyType == CompanyType.FIRM) businessName else null,
+            icon = icon
         )
     }
 }

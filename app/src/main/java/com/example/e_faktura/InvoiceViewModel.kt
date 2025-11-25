@@ -11,4 +11,8 @@ class InvoiceViewModel : ViewModel() {
     fun addCompany(company: Company) {
         _companies.value = _companies.value + company
     }
+
+    fun deleteCompany(company: Company) {
+        _companies.value = _companies.value - company
+    }
 }

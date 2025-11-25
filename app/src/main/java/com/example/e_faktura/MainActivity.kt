@@ -10,6 +10,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -23,10 +24,19 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            EfakturaTheme {
+            val context = LocalContext.current
+            val settingsViewModel: SettingsViewModel = viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                    return SettingsViewModel(context.applicationContext) as T
+                }
+            })
+            val isDarkTheme by settingsViewModel.isDarkTheme.collectAsState()
+
+            EfakturaTheme(darkTheme = isDarkTheme) {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     val navController = rememberNavController()
                     val invoiceViewModel: InvoiceViewModel = viewModel()
+                    val companyViewModel: CompanyViewModel = viewModel()
                     NavHost(
                         navController = navController,
                         startDestination = "splash",
@@ -39,7 +49,10 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(navController = navController, invoiceViewModel = invoiceViewModel)
                         }
                         composable("add_company") {
-                            AddCompanyScreen(navController = navController, invoiceViewModel = invoiceViewModel)
+                            AddCompanyScreen(navController = navController, invoiceViewModel = invoiceViewModel, companyViewModel = companyViewModel)
+                        }
+                        composable("settings") {
+                            SettingsScreen(navController = navController)
                         }
                         composable(
                             "company_details/{nip}",
@@ -49,7 +62,11 @@ class MainActivity : ComponentActivity() {
                             val companies by invoiceViewModel.companies.collectAsState()
                             val company = companies.find { it.nip == nip }
                             if (company != null) {
-                                CompanyDetailsScreen(navController = navController, company = company)
+                                CompanyDetailsScreen(
+                                    navController = navController,
+                                    company = company,
+                                    invoiceViewModel = invoiceViewModel
+                                )
                             }
                         }
                     }
