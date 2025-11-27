@@ -3,7 +3,6 @@ package com.example.e_faktura
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
-// --- ENUMY (Tylko tutaj!) ---
 enum class IconType {
     PREDEFINED,
     CUSTOM
@@ -14,14 +13,11 @@ enum class CompanyType {
     SOLE_PROPRIETORSHIP
 }
 
-// --- KLASY DANYCH ---
-
 @Parcelize
 data class CompanyIcon(
     val type: IconType = IconType.PREDEFINED,
     val iconName: String = "Business"
 ) : Parcelable {
-    // Pusty konstruktor dla Firebase
     constructor() : this(IconType.PREDEFINED, "Business")
 }
 
@@ -34,7 +30,6 @@ data class Company(
     val businessName: String? = null,
     val icon: CompanyIcon = CompanyIcon()
 ) : Parcelable {
-    // Pusty konstruktor dla Firebase
     constructor() : this(CompanyType.FIRM, "", "", null, null, CompanyIcon())
 
     val displayName: String

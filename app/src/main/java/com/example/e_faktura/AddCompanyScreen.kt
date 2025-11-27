@@ -32,12 +32,11 @@ import coil.compose.rememberAsyncImagePainter
 @Composable
 fun AddCompanyScreen(
     navController: NavController,
-    invoiceViewModel: InvoiceViewModel, // Zakładam, że ten VM korzysta z CompanyRepository
+    invoiceViewModel: InvoiceViewModel,
     companyViewModel: CompanyViewModel = viewModel()
 ) {
     val context = LocalContext.current
 
-    // Walidacja: NIP musi mieć 10 znaków i odpowiednie pola tekstowe nie mogą być puste
     val isFormValid by remember(companyViewModel.companyType, companyViewModel.businessName, companyViewModel.ownerFullName, companyViewModel.nip) {
         mutableStateOf(
             when (companyViewModel.companyType) {
@@ -77,7 +76,6 @@ fun AddCompanyScreen(
         ) {
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Sekcja Ikony
             Box(modifier = Modifier.clickable { showIconPicker = true }) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     IconSelection(companyViewModel.icon)
@@ -90,7 +88,6 @@ fun AddCompanyScreen(
             CompanyTypeSelection(companyViewModel)
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Formularz
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(2.dp),
@@ -153,17 +150,12 @@ fun AddCompanyScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Przycisk Zapisz
             Button(
                 enabled = isFormValid,
                 onClick = {
                     try {
                         val newCompany = companyViewModel.saveCompany()
-
-                        // Tutaj wywołujemy dodawanie. Upewnij się, że InvoiceViewModel woła
-                        // CompanyRepository.addCompany(newCompany)
                         invoiceViewModel.addCompany(newCompany)
-
                         Toast.makeText(context, "Firma dodana!", Toast.LENGTH_SHORT).show()
                         navController.popBackStack()
                     } catch (e: Exception) {
@@ -185,8 +177,6 @@ fun AddCompanyScreen(
 @Composable
 private fun CompanyTypeSelection(companyViewModel: CompanyViewModel) {
     val options = listOf("Firma", "Działalność jednoosobowa")
-    // Jeśli korzystasz z najnowszej wersji Material3, SingleChoiceSegmentedButtonRow jest OK.
-    // Jeśli kompilator krzyczy, sprawdź importy.
     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
         options.forEachIndexed { index, label ->
             SegmentedButton(
@@ -207,7 +197,7 @@ private fun CompanyTypeSelection(companyViewModel: CompanyViewModel) {
 private fun IconSelection(icon: CompanyIcon) {
     Box(
         modifier = Modifier
-            .size(100.dp) // Zmniejszyłem trochę, żeby było zgrabniej
+            .size(100.dp)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
@@ -215,7 +205,7 @@ private fun IconSelection(icon: CompanyIcon) {
         when (icon.type) {
             IconType.PREDEFINED -> {
                 Icon(
-                    imageVector = IconProvider.getIcon(icon.iconName), // Upewnij się, że masz IconProvider
+                    imageVector = IconProvider.getIcon(icon.iconName),
                     contentDescription = "Ikona firmy",
                     modifier = Modifier
                         .fillMaxSize()
