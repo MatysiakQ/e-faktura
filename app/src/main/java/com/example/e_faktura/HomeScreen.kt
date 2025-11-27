@@ -52,17 +52,23 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun HomeScreen(navController: NavController, invoiceViewModel: InvoiceViewModel) {
+fun HomeScreen(
+    navController: NavController,
+    invoiceViewModel: InvoiceViewModel,
+    authViewModel: AuthViewModel = viewModel()
+) {
     val companies by invoiceViewModel.companies.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val listState = rememberLazyListState()
+    val isUserLoggedIn = authViewModel.isUserLoggedIn()
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -79,7 +85,9 @@ fun HomeScreen(navController: NavController, invoiceViewModel: InvoiceViewModel)
                             Image(
                                 painter = painterResource(id = R.drawable.logo),
                                 contentDescription = "Logo aplikacji",
-                                modifier = Modifier.fillMaxSize().padding(4.dp)
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(4.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
@@ -95,6 +103,16 @@ fun HomeScreen(navController: NavController, invoiceViewModel: InvoiceViewModel)
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(text = { Text("Ustawienia") }, onClick = { navController.navigate("settings") })
+                        if (isUserLoggedIn) {
+                            DropdownMenuItem(text = { Text("Wyloguj") }, onClick = {
+                                authViewModel.signOut()
+                                navController.navigate("login") {
+                                    popUpTo("home") { inclusive = true }
+                                }
+                            })
+                        } else {
+                            DropdownMenuItem(text = { Text("Zaloguj") }, onClick = { navController.navigate("login") })
+                        }
                     }
                 },
                 scrollBehavior = scrollBehavior

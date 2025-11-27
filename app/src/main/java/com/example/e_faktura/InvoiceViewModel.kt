@@ -1,31 +1,31 @@
 package com.example.e_faktura
 
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 
 class InvoiceViewModel : ViewModel() {
-    private val _companies = MutableStateFlow<List<Company>>(emptyList())
-    val companies = _companies.asStateFlow()
+
+    private val repository = CompanyRepository()
+
+    val companies: StateFlow<List<Company>> = repository.getCompanies()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     fun addCompany(company: Company) {
-        _companies.value = _companies.value + company
+        repository.addCompany(company)
     }
 
     fun deleteCompany(company: Company) {
-        _companies.value = _companies.value - company
+        repository.deleteCompany(company)
     }
 
     fun updateCompanyIcon(company: Company, newIcon: CompanyIcon) {
-        _companies.update {
-            it.map {
-                if (it.nip == company.nip) {
-                    it.copy(icon = newIcon)
-                } else {
-                    it
-                }
-            }
-        }
+        repository.updateCompanyIcon(company, newIcon)
     }
 }

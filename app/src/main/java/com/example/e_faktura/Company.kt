@@ -11,14 +11,17 @@ enum class IconType {
 
 @Serializable
 @Parcelize
-data class CompanyIcon(val type: IconType, val iconName: String) : Parcelable
+data class CompanyIcon(
+    val type: IconType = IconType.PREDEFINED,
+    val iconName: String = "Business"
+) : Parcelable
 
 @Serializable
 @Parcelize
 data class Company(
-    val type: CompanyType,
-    val nip: String,
-    val address: String,
+    val type: CompanyType = CompanyType.FIRM,
+    val nip: String = "",
+    val address: String = "",
     val ownerFullName: String? = null,
     val businessName: String? = null,
     val icon: CompanyIcon = CompanyIcon(IconType.PREDEFINED, "Business")
