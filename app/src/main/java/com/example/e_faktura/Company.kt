@@ -2,21 +2,29 @@ package com.example.e_faktura
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
-import kotlinx.serialization.Serializable
 
+// --- ENUMY (Tylko tutaj!) ---
 enum class IconType {
     PREDEFINED,
     CUSTOM
 }
 
-@Serializable
+enum class CompanyType {
+    FIRM,
+    SOLE_PROPRIETORSHIP
+}
+
+// --- KLASY DANYCH ---
+
 @Parcelize
 data class CompanyIcon(
     val type: IconType = IconType.PREDEFINED,
     val iconName: String = "Business"
-) : Parcelable
+) : Parcelable {
+    // Pusty konstruktor dla Firebase
+    constructor() : this(IconType.PREDEFINED, "Business")
+}
 
-@Serializable
 @Parcelize
 data class Company(
     val type: CompanyType = CompanyType.FIRM,
@@ -24,8 +32,11 @@ data class Company(
     val address: String = "",
     val ownerFullName: String? = null,
     val businessName: String? = null,
-    val icon: CompanyIcon = CompanyIcon(IconType.PREDEFINED, "Business")
+    val icon: CompanyIcon = CompanyIcon()
 ) : Parcelable {
+    // Pusty konstruktor dla Firebase
+    constructor() : this(CompanyType.FIRM, "", "", null, null, CompanyIcon())
+
     val displayName: String
         get() = when (type) {
             CompanyType.FIRM -> businessName ?: "Brak nazwy"

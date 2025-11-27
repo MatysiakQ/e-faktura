@@ -12,7 +12,20 @@
           "package_name": "com.example.e_faktura"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "101081714418-kp1nst10cgochkfp4s25a4ucqmjsj3nf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.e_faktura",
+            "certificate_hash": "a3b55571f8d62595c14d4c5c4b34274241287070"
+          }
+        },
+        {
+          "client_id": "101081714418-9abipa46hotpqhlupsfoff9mepphnhl1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCYBVTEsTQMEuwYsM4m79uFZWmGU8yKGyE"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "101081714418-9abipa46hotpqhlupsfoff9mepphnhl1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

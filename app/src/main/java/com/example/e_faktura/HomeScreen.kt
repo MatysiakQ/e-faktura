@@ -1,6 +1,7 @@
 package com.example.e_faktura
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -22,9 +23,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -37,6 +40,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -49,11 +53,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import coil.compose.rememberAsyncImagePainter
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -69,6 +75,19 @@ fun HomeScreen(
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val listState = rememberLazyListState()
     val isUserLoggedIn = authViewModel.isUserLoggedIn()
+    val context = LocalContext.current
+    var companyToDelete by remember { mutableStateOf<Company?>(null) }
+
+    if (companyToDelete != null) {
+        DeleteConfirmationDialog(
+            companyName = companyToDelete!!.displayName,
+            onConfirm = {
+                invoiceViewModel.deleteCompany(companyToDelete!!)
+                companyToDelete = null
+            },
+            onDismiss = { companyToDelete = null }
+        )
+    }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -102,16 +121,22 @@ fun HomeScreen(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
-                        DropdownMenuItem(text = { Text("Ustawienia") }, onClick = { navController.navigate("settings") })
                         if (isUserLoggedIn) {
+                            DropdownMenuItem(text = { Text("Moje konto") }, onClick = { navController.navigate("my_account") })
+                            DropdownMenuItem(text = { Text("Ustawienia") }, onClick = { navController.navigate("settings") })
                             DropdownMenuItem(text = { Text("Wyloguj") }, onClick = {
                                 authViewModel.signOut()
+                                Toast.makeText(context, "Wylogowano pomyślnie", Toast.LENGTH_SHORT).show()
                                 navController.navigate("login") {
-                                    popUpTo("home") { inclusive = true }
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        inclusive = true
+                                    }
+                                    launchSingleTop = true
                                 }
                             })
                         } else {
                             DropdownMenuItem(text = { Text("Zaloguj") }, onClick = { navController.navigate("login") })
+                            DropdownMenuItem(text = { Text("Ustawienia") }, onClick = { navController.navigate("settings") })
                         }
                     }
                 },
@@ -162,9 +187,13 @@ fun HomeScreen(
                         .padding(horizontal = 16.dp)
                 ) {
                     items(filteredCompanies, key = { it.nip }) { company ->
-                        CompanyItem(company = company) {
-                            navController.navigate("company_details/${company.nip}")
-                        }
+                        CompanyItem(
+                            company = company,
+                            onClick = {
+                                navController.navigate("company_details/${company.nip}")
+                            },
+                            onDelete = { companyToDelete = company }
+                        )
                     }
                 }
             }
@@ -172,9 +201,28 @@ fun HomeScreen(
     }
 }
 
+@Composable
+fun DeleteConfirmationDialog(companyName: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Potwierdź usunięcie") },
+        text = { Text("Czy na pewno chcesz usunąć firmę \"$companyName\" ze swojej listy?") },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Usuń")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Anuluj")
+            }
+        }
+    )
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun LazyItemScope.CompanyItem(company: Company, onClick: () -> Unit) {
+fun LazyItemScope.CompanyItem(company: Company, onClick: () -> Unit, onDelete: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -196,6 +244,7 @@ fun LazyItemScope.CompanyItem(company: Company, onClick: () -> Unit) {
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
+
                 IconType.CUSTOM -> {
                     Image(
                         painter = rememberAsyncImagePainter(model = Uri.parse(company.icon.iconName)),
@@ -215,6 +264,9 @@ fun LazyItemScope.CompanyItem(company: Company, onClick: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Filled.Delete, contentDescription = "Usuń firmę", tint = MaterialTheme.colorScheme.error)
             }
         }
     }
