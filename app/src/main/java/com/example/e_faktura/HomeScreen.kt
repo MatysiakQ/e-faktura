@@ -23,6 +23,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -32,6 +34,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -57,6 +60,7 @@ import coil.compose.rememberAsyncImagePainter
 fun HomeScreen(navController: NavController, invoiceViewModel: InvoiceViewModel) {
     val companies by invoiceViewModel.companies.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val listState = rememberLazyListState()
 
@@ -97,25 +101,40 @@ fun HomeScreen(navController: NavController, invoiceViewModel: InvoiceViewModel)
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { navController.navigate("add_company") }) {
-                Icon(Icons.Filled.Add, contentDescription = "Dodaj firmę")
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                FloatingActionButton(onClick = { navController.navigate("add_company") }) {
+                    Icon(Icons.Filled.Add, contentDescription = "Dodaj firmę")
+                }
+                FloatingActionButton(onClick = { navController.navigate("qr_code_scanner") }) {
+                    Icon(Icons.Filled.QrCodeScanner, contentDescription = "Skanuj kod QR")
+                }
             }
         }
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            if (companies.isEmpty()) {
+        Column(modifier = Modifier.padding(paddingValues)) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text("Wyszukaj firmę...") },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            val filteredCompanies = companies.filter {
+                it.displayName.contains(searchQuery, ignoreCase = true) ||
+                        it.nip.contains(searchQuery, ignoreCase = true)
+            }
+
+            if (filteredCompanies.isEmpty()) {
                 Text(
-                    text = "Brak zapisanych podmiotów.\nKliknij \"+\", aby dodać nowy.",
+                    text = if (searchQuery.isNotBlank()) "Brak wyników wyszukiwania" else "Brak zapisanych podmiotów.\nKliknij \"+\", aby dodać nowy.",
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(16.dp)
-                        .align(Alignment.Center)
                 )
             } else {
                 LazyColumn(
@@ -124,7 +143,7 @@ fun HomeScreen(navController: NavController, invoiceViewModel: InvoiceViewModel)
                         .fillMaxSize()
                         .padding(horizontal = 16.dp)
                 ) {
-                    items(companies, key = { it.nip }) { company ->
+                    items(filteredCompanies, key = { it.nip }) { company ->
                         CompanyItem(company = company) {
                             navController.navigate("company_details/${company.nip}")
                         }
