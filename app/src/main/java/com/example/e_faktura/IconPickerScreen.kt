@@ -1,5 +1,7 @@
 package com.example.e_faktura
 
+// gotowe
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable

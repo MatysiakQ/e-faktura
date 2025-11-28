@@ -1,3 +1,4 @@
+// gotowe
 package com.example.e_faktura
 
 import com.google.firebase.auth.FirebaseAuth
