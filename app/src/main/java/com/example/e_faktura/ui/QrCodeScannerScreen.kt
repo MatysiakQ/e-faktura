@@ -1,3 +1,4 @@
+// gotowe
 package com.example.e_faktura.ui
 
 import android.Manifest
