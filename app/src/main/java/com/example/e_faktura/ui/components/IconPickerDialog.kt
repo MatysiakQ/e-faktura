@@ -1,6 +1,7 @@
 package com.example.e_faktura.ui.components
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -21,30 +22,42 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.core.content.ContextCompat
 import com.example.e_faktura.model.CompanyIcon
 import com.example.e_faktura.model.IconType
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 
-/**
- * A dialog for selecting a predefined icon or choosing a custom one from the gallery.
- */
-@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun IconPickerDialog(
     onDismiss: () -> Unit,
     onIconSelected: (CompanyIcon) -> Unit
 ) {
+    val context = LocalContext.current
+
     val permissionToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         Manifest.permission.READ_MEDIA_IMAGES
     } else {
         Manifest.permission.READ_EXTERNAL_STORAGE
     }
-    val galleryPermissionState = rememberPermissionState(permission = permissionToRequest)
+
+    var hasPermission by remember {
+        mutableStateOf(ContextCompat.checkSelfPermission(context, permissionToRequest) == PackageManager.PERMISSION_GRANTED)
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            hasPermission = isGranted
+        }
+    )
+
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri ->
@@ -81,10 +94,10 @@ fun IconPickerDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedButton(
                     onClick = {
-                        if (galleryPermissionState.status.isGranted) {
+                        if (hasPermission) {
                             galleryLauncher.launch("image/*")
                         } else {
-                            galleryPermissionState.launchPermissionRequest()
+                            permissionLauncher.launch(permissionToRequest)
                         }
                     },
                     modifier = Modifier.fillMaxWidth()

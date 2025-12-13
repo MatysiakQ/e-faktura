@@ -86,7 +86,6 @@ dependencies {
     implementation("com.google.zxing:core:3.5.3")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
-    implementation("com.google.accompanist:accompanist-permissions:0.36.0")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     // --- Retrofit (GUS API) ---

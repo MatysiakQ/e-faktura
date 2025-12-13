@@ -7,13 +7,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Business
-import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -22,17 +20,20 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navigation
+import com.example.e_faktura.R
 import com.example.e_faktura.ui.AppViewModelProvider
 import com.example.e_faktura.ui.QrCodeScannerScreen
-import com.example.e_faktura.ui.core.SplashScreen
 import com.example.e_faktura.ui.auth.AuthViewModel
 import com.example.e_faktura.ui.auth.LoginScreen
 import com.example.e_faktura.ui.auth.RegistrationScreen
 import com.example.e_faktura.ui.company.add.AddCompanyScreen
 import com.example.e_faktura.ui.company.list.CompanyListScreen
+import com.example.e_faktura.ui.core.SplashScreen
+import com.example.e_faktura.ui.dashboard.StatisticsScreen
 import com.example.e_faktura.ui.invoice.add.AddInvoiceScreen
 import com.example.e_faktura.ui.invoice.list.InvoiceDashboardScreen
+import com.example.e_faktura.ui.navigation.Screen
+import com.example.e_faktura.ui.navigation.bottomNavItems
 import com.example.e_faktura.ui.theme.EfakturaTheme
 
 class MainActivity : ComponentActivity() {
@@ -43,20 +44,16 @@ class MainActivity : ComponentActivity() {
             EfakturaTheme {
                 val rootNavController = rememberNavController()
 
-                NavHost(navController = rootNavController, startDestination = "splash") {
-                    composable("splash") { SplashScreen(navController = rootNavController) }
-                    composable("main_app") { AppScaffold(rootNavController = rootNavController) } 
-                    navigation(startDestination = "login", route = "login_flow") {
-                        composable("login") {
-                            val backStackEntry = remember(it) { rootNavController.getBackStackEntry("login_flow") }
-                            val authViewModel: AuthViewModel = viewModel(viewModelStoreOwner = backStackEntry, factory = AppViewModelProvider.Factory)
-                            LoginScreen(navController = rootNavController, authViewModel = authViewModel)
-                        }
-                        composable("register") {
-                            val backStackEntry = remember(it) { rootNavController.getBackStackEntry("login_flow") }
-                            val authViewModel: AuthViewModel = viewModel(viewModelStoreOwner = backStackEntry, factory = AppViewModelProvider.Factory)
-                            RegistrationScreen(navController = rootNavController, authViewModel = authViewModel)
-                        }
+                NavHost(navController = rootNavController, startDestination = Screen.Splash.route) {
+                    composable(Screen.Splash.route) { SplashScreen(navController = rootNavController) }
+                    composable(Screen.MainApp.route) { AppScaffold(rootNavController = rootNavController) }
+                    composable(Screen.Login.route) {
+                        val authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                        LoginScreen(navController = rootNavController, authViewModel = authViewModel)
+                    }
+                    composable(Screen.Register.route) {
+                        val authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                        RegistrationScreen(navController = rootNavController, authViewModel = authViewModel)
                     }
                 }
             }
@@ -72,43 +69,33 @@ fun AppScaffold(rootNavController: NavHostController) {
     val user by authViewModel.user.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
 
-    // This effect handles navigation when the user logs out.
-    // It remembers the initial state to avoid navigating on first composition.
-    val wasUserLoggedIn = remember { mutableStateOf(user != null && user?.isAnonymous == false) }
-    LaunchedEffect(user) {
-        val isUserLoggedIn = user != null && user?.isAnonymous == false
-        // If the user was logged in but isn't anymore, navigate to login.
-        if (wasUserLoggedIn.value && !isUserLoggedIn) {
-            rootNavController.navigate("login_flow") {
-                // Clear the back stack to prevent going back to the authenticated part of the app.
-                popUpTo("main_app") { inclusive = true }
-            }
-        }
-        wasUserLoggedIn.value = isUserLoggedIn
-    }
+    val isLoggedIn = user != null && user?.isAnonymous == false
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("e-Faktura") },
+                title = { Text(if (isLoggedIn) user?.email ?: "e-Faktura" else "Witaj, Gościu") },
                 actions = {
                     IconButton(onClick = { showMenu = !showMenu }) {
                         Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Menu")
                     }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                        if (user == null || user?.isAnonymous == true) {
-                            DropdownMenuItem(
-                                text = { Text("Zaloguj / Zarejestruj się") },
-                                onClick = {
-                                    rootNavController.navigate("login_flow")
-                                    showMenu = false
-                                }
-                            )
-                        } else {
+                        if (isLoggedIn) {
                             DropdownMenuItem(
                                 text = { Text("Wyloguj") },
                                 onClick = {
                                     authViewModel.logout()
+                                    showMenu = false
+                                    rootNavController.navigate(Screen.Login.route) {
+                                        popUpTo(Screen.MainApp.route) { inclusive = true }
+                                    }
+                                }
+                            )
+                        } else {
+                            DropdownMenuItem(
+                                text = { Text("Zaloguj") },
+                                onClick = {
+                                    rootNavController.navigate(Screen.Login.route)
                                     showMenu = false
                                 }
                             )
@@ -122,9 +109,9 @@ fun AppScaffold(rootNavController: NavHostController) {
             FloatingActionButton(onClick = {
                 val currentRoute = navController.currentBackStackEntry?.destination?.route
                 if (currentRoute == Screen.Home.route) {
-                    navController.navigate("add_invoice")
+                    navController.navigate(Screen.AddInvoice.route)
                 } else if (currentRoute == Screen.Companies.route) {
-                    navController.navigate("add_company")
+                    navController.navigate(Screen.AddCompany.route)
                 }
             }) {
                 Icon(Icons.Default.Add, contentDescription = "Dodaj")
@@ -135,18 +122,20 @@ fun AppScaffold(rootNavController: NavHostController) {
             val currentDestination = navBackStackEntry?.destination
             NavigationBar {
                 bottomNavItems.forEach { screen ->
-                    NavigationBarItem(
-                        icon = { Icon(screen.icon, contentDescription = screen.label) },
-                        label = { Text(screen.label) },
-                        selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-                        onClick = {
-                            navController.navigate(screen.route) {
-                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
+                    screen.icon?.let { icon ->
+                        NavigationBarItem(
+                            icon = { Icon(icon, contentDescription = screen.label) },
+                            label = { screen.label?.let { Text(it) } },
+                            selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                            onClick = {
+                                navController.navigate(screen.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
@@ -154,9 +143,10 @@ fun AppScaffold(rootNavController: NavHostController) {
         NavHost(navController = navController, startDestination = Screen.Home.route, modifier = Modifier.padding(innerPadding)) {
             composable(Screen.Home.route) { InvoiceDashboardScreen(navController = navController) }
             composable(Screen.Companies.route) { CompanyListScreen() }
-            composable("add_company") { AddCompanyScreen(onCompanyAdded = { navController.popBackStack() }) }
-            composable("add_invoice") { AddInvoiceScreen(navController = navController, onInvoiceAdded = { navController.popBackStack() }) }
-            composable("scan_qr") {
+            composable(Screen.Statistics.route) { StatisticsScreen(navController) }
+            composable(Screen.AddCompany.route) { AddCompanyScreen(onCompanyAdded = { navController.popBackStack() }) }
+            composable(Screen.AddInvoice.route) { AddInvoiceScreen(navController = navController, onInvoiceAdded = { navController.popBackStack() }) }
+            composable(Screen.QrScanner.route) {
                 QrCodeScannerScreen(navController = navController, onQrCodeScanned = { scannedNip ->
                     navController.previousBackStackEntry?.savedStateHandle?.set("scannedNip", scannedNip)
                     navController.popBackStack()
@@ -165,10 +155,3 @@ fun AppScaffold(rootNavController: NavHostController) {
         }
     }
 }
-
-sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
-    object Home : Screen("home", "Pulpit", Icons.Filled.Dashboard)
-    object Companies : Screen("companies", "Moje Firmy", Icons.Filled.Business)
-}
-
-val bottomNavItems = listOf(Screen.Home, Screen.Companies)

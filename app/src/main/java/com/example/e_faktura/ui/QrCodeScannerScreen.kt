@@ -1,8 +1,10 @@
-// gotowe
 package com.example.e_faktura.ui
 
 import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -23,24 +25,41 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 
-@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QrCodeScannerScreen(
     navController: NavController,
     onQrCodeScanned: (String) -> Unit
 ) {
-    val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
+    val context = LocalContext.current
+    var hasCameraPermission by remember {
+        mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            hasCameraPermission = isGranted
+            if (!isGranted) {
+                // Optionally, show a toast or message that permission was denied
+                navController.popBackStack()
+            }
+        }
+    )
 
     val scanLauncher = rememberLauncherForActivityResult(
         contract = ScanContract(),
@@ -48,17 +67,13 @@ fun QrCodeScannerScreen(
             if (result.contents != null) {
                 onQrCodeScanned(result.contents)
             } else {
-                // User pressed back button, navigate back
                 navController.popBackStack()
             }
         }
     )
 
-    // We check the permission status directly
-    if (cameraPermissionState.status.isGranted) {
-        // If permission is granted, launch the scanner immediately.
-        // LaunchedEffect ensures this is only called once.
-        LaunchedEffect(Unit) {
+    LaunchedEffect(key1 = hasCameraPermission) {
+        if (hasCameraPermission) {
             val options = ScanOptions().apply {
                 setDesiredBarcodeFormats(ScanOptions.QR_CODE)
                 setPrompt("Zeskanuj kod QR")
@@ -67,9 +82,15 @@ fun QrCodeScannerScreen(
                 setBarcodeImageEnabled(true)
             }
             scanLauncher.launch(options)
+        } else {
+            // Request permission if not already granted
+            permissionLauncher.launch(Manifest.permission.CAMERA)
         }
-    } else {
-        // If permission is not granted, show the rationale screen.
+    }
+
+    // This part of the UI will be briefly visible while the permission is being requested,
+    // or if the user navigates back from the permission dialog.
+    if (!hasCameraPermission) {
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -109,7 +130,7 @@ fun QrCodeScannerScreen(
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(24.dp))
-                Button(onClick = { cameraPermissionState.launchPermissionRequest() }) {
+                Button(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) {
                     Text("Udziel pozwolenia")
                 }
             }

@@ -11,13 +11,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ReceiptLong
-import androidx.compose.material3.*
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -26,6 +30,7 @@ import androidx.navigation.NavController
 import com.example.e_faktura.model.Invoice
 import com.example.e_faktura.ui.AppViewModelProvider
 import com.example.e_faktura.ui.components.FinancialDashboardCard
+import com.example.e_faktura.ui.navigation.Screen
 
 @Composable
 fun InvoiceDashboardScreen(
@@ -35,9 +40,6 @@ fun InvoiceDashboardScreen(
     val uiState by invoiceViewModel.uiState.collectAsState()
     val invoices = uiState.invoices
 
-    val totalAmount = invoices.sumOf { it.amount }
-    val unpaidAmount = invoices.filter { !it.isPaid }.sumOf { it.amount }
-
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -45,11 +47,7 @@ fun InvoiceDashboardScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            FinancialDashboardCard(
-                title = "Saldo faktur",
-                primaryAmount = String.format("%,.2f", unpaidAmount),
-                secondaryAmount = String.format("%,.2f", totalAmount)
-            )
+            FinancialDashboardCard(onCardClick = { navController.navigate(Screen.Statistics.route) })
         }
 
         item {
@@ -82,10 +80,10 @@ private fun EmptyState() {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Icon(
-            imageVector = Icons.Filled.ReceiptLong,
+            imageVector = Icons.Outlined.Description,
             contentDescription = "Brak faktur",
-            modifier = Modifier.size(80.dp), 
-            tint = MaterialTheme.colorScheme.surfaceVariant
+            modifier = Modifier.size(80.dp),
+            tint = Color.Gray
         )
         Text(
             text = "Brak faktur do wyświetlenia",

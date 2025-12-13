@@ -1,15 +1,28 @@
 package com.example.e_faktura.ui.navigation
 
-// Definicja wszystkich ekranów w aplikacji
-sealed class Screen(val route: String) {
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.ui.graphics.vector.ImageVector
+
+sealed class Screen(val route: String, val label: String? = null, val icon: ImageVector? = null) {
+    // Main App Screens
+    object Home : Screen("home", "Pulpit", Icons.Filled.Dashboard)
+    object Companies : Screen("companies", "Moje Firmy", Icons.Filled.Business)
+    object Statistics : Screen("statistics", "Statystyki", Icons.Filled.PieChart)
+    object AddInvoice : Screen("add_invoice")
+    object AddCompany : Screen("add_company")
+    object QrScanner : Screen("scan_qr")
+
+    // Auth Screens
     object Login : Screen("login")
     object Register : Screen("register")
-    object Dashboard : Screen("dashboard")         // Naprawia błąd 'Dashboard'
-    object Business : Screen("business_list")      // Naprawia błąd 'Business' (Lista Firm)
-    object MyAccount : Screen("my_account")
-    object AddCompany : Screen("add_company")
-    object EditCompany : Screen("edit_company")
-    object AddInvoice : Screen("add_invoice")
-    object InvoiceDashboard : Screen("invoice_dashboard")
-    object QrScanner : Screen("qr_scanner")
+    
+    // Root Nav
+    object Splash : Screen("splash")
+    object MainApp : Screen("main_app")
+    object LoginFlow : Screen("login_flow")
 }
+
+val bottomNavItems = listOf(Screen.Home, Screen.Companies)

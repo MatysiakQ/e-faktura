@@ -16,6 +16,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.e_faktura.R
+import com.example.e_faktura.ui.navigation.Screen
 import kotlinx.coroutines.delay
 
 @Composable
@@ -27,10 +28,9 @@ fun SplashScreen(navController: NavController) {
             targetValue = 1f,
             animationSpec = tween(durationMillis = 1500)
         )
-        delay(1500)
-        // CORRECTED: Navigate to the main app graph for Guest Access
-        navController.navigate("main_app") {
-            popUpTo("splash") { inclusive = true }
+        delay(2000)
+        navController.navigate(Screen.MainApp.route) {
+            popUpTo(Screen.Splash.route) { inclusive = true }
         }
     }
 
