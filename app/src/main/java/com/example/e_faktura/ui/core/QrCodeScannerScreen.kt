@@ -1,4 +1,4 @@
-package com.example.e_faktura.ui
+package com.example.e_faktura.ui.core
 
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -47,16 +47,12 @@ fun QrCodeScannerScreen(
             if (result.contents != null) {
                 onQrCodeScanned(result.contents)
             } else {
-                // User pressed back button, navigate back
                 navController.popBackStack()
             }
         }
     )
 
-    // We check the permission status directly
     if (cameraPermissionState.status.isGranted) {
-        // If permission is granted, launch the scanner immediately.
-        // LaunchedEffect ensures this is only called once.
         LaunchedEffect(Unit) {
             val options = ScanOptions().apply {
                 setDesiredBarcodeFormats(ScanOptions.QR_CODE)
@@ -68,7 +64,6 @@ fun QrCodeScannerScreen(
             scanLauncher.launch(options)
         }
     } else {
-        // If permission is not granted, show the rationale screen.
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -91,7 +86,7 @@ fun QrCodeScannerScreen(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Search,
-                    contentDescription = "Ikona skanowania",
+                    contentDescription = "Ikona aparatu",
                     modifier = Modifier.size(128.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )

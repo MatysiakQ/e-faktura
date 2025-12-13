@@ -7,35 +7,42 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80,
-    background = Color(0xFF1C1B1F),
-    surface = Color(0xFF1C1B1F),
-    onPrimary = Color(0xFF381E72),
-    onSecondary = Color(0xFF332D41),
-    onTertiary = Color(0xFF492532),
-    onBackground = Color(0xFFE6E1E5),
-    onSurface = Color(0xFFE6E1E5),
+    primary = LimeAccent,
+    onPrimary = NavyDark,
+    primaryContainer = NavyLight,
+    onPrimaryContainer = LimeLight,
+    secondary = NavyLight,
+    onSecondary = GreyLight,
+    background = NavyPrimary,
+    onBackground = GreyLight,
+    surface = NavyPrimary,
+    onSurface = GreyLight,
+    surfaceVariant = NavyLight,
+    onSurfaceVariant = GreyMedium,
+    error = ErrorRed,
+    onError = White
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40,
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
+    primary = NavyPrimary,
+    onPrimary = White,
+    primaryContainer = NavyLight,
+    onPrimaryContainer = White,
+    secondary = NavyLight,
+    onSecondary = White,
+    background = GreyLight,
+    onBackground = NavyDark,
+    surface = White,
+    onSurface = NavyDark,
+    surfaceVariant = GreyLight,
+    onSurfaceVariant = NavyPrimary,
+    error = ErrorRed,
+    onError = White
 )
 
 @Composable
@@ -43,21 +50,18 @@ fun EfakturaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) {
-        DarkColorScheme
-    } else {
-        LightColorScheme
-    }
-
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
         }
     }
 
+    // Usunąłem CompositionLocalProvider z LocalRippleTheme, który powodował błąd.
+    // Teraz używamy czystego MaterialTheme 3.
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,

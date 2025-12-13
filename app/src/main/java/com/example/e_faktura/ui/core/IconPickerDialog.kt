@@ -1,4 +1,4 @@
-package com.example.e_faktura
+package com.example.e_faktura.ui.core
 
 import android.Manifest
 import android.os.Build
@@ -28,9 +28,15 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 
+// Theduplicate IconProvider object has been removed from this file.
+// This composable will now use the external IconProvider.kt file, assuming it exists in the same package.
+
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun IconPickerDialog(onDismiss: () -> Unit, onIconSelected: (CompanyIcon) -> Unit) {
+fun IconPickerDialog(
+    onDismiss: () -> Unit,
+    onIconSelected: (String) -> Unit
+) {
     val permissionToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         Manifest.permission.READ_MEDIA_IMAGES
     } else {
@@ -41,7 +47,7 @@ fun IconPickerDialog(onDismiss: () -> Unit, onIconSelected: (CompanyIcon) -> Uni
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri ->
             if (uri != null) {
-                onIconSelected(CompanyIcon(IconType.CUSTOM, uri.toString()))
+                onIconSelected("CUSTOM:${uri.toString()}")
                 onDismiss()
             }
         }
@@ -64,7 +70,7 @@ fun IconPickerDialog(onDismiss: () -> Unit, onIconSelected: (CompanyIcon) -> Uni
                             modifier = Modifier
                                 .size(64.dp)
                                 .clickable {
-                                    onIconSelected(CompanyIcon(IconType.PREDEFINED, iconName))
+                                    onIconSelected("PREDEFINED:$iconName")
                                     onDismiss()
                                 }
                         )

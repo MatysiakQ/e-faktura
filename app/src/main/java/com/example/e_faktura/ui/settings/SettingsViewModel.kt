@@ -1,4 +1,4 @@
-package com.example.e_faktura
+package com.example.e_faktura.ui.settings
 
 import android.app.Application
 import android.content.Context
@@ -15,8 +15,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
-private val IS_DARK_THEME = booleanPreferencesKey("is_dark_theme")
+val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
     private val dataStore = application.dataStore
@@ -37,5 +36,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 it[IS_DARK_THEME] = isDark
             }
         }
+    }
+
+    companion object {
+        val IS_DARK_THEME = booleanPreferencesKey("is_dark_theme")
     }
 }
