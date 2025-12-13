@@ -41,17 +41,22 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             EfakturaTheme {
-                // The single, root NavController for the entire application
                 val rootNavController = rememberNavController()
 
                 NavHost(navController = rootNavController, startDestination = "splash") {
                     composable("splash") { SplashScreen(navController = rootNavController) }
-                    // The main app is now a single destination with its own internal navigation
                     composable("main_app") { AppScaffold(rootNavController = rootNavController) } 
-                    // The login flow is a separate, nested graph
                     navigation(startDestination = "login", route = "login_flow") {
-                        composable("login") { LoginScreen(navController = rootNavController, authViewModel = viewModel(factory = AppViewModelProvider.Factory)) }
-                        composable("register") { RegistrationScreen(navController = rootNavController, authViewModel = viewModel(factory = AppViewModelProvider.Factory)) }
+                        composable("login") {
+                            val backStackEntry = remember(it) { rootNavController.getBackStackEntry("login_flow") }
+                            val authViewModel: AuthViewModel = viewModel(viewModelStoreOwner = backStackEntry, factory = AppViewModelProvider.Factory)
+                            LoginScreen(navController = rootNavController, authViewModel = authViewModel)
+                        }
+                        composable("register") {
+                            val backStackEntry = remember(it) { rootNavController.getBackStackEntry("login_flow") }
+                            val authViewModel: AuthViewModel = viewModel(viewModelStoreOwner = backStackEntry, factory = AppViewModelProvider.Factory)
+                            RegistrationScreen(navController = rootNavController, authViewModel = authViewModel)
+                        }
                     }
                 }
             }
@@ -62,11 +67,25 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppScaffold(rootNavController: NavHostController) {
-    // DEFINITIVE FIX: This is the ONLY NavController for the main app UI.
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val user by authViewModel.user.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
+
+    // This effect handles navigation when the user logs out.
+    // It remembers the initial state to avoid navigating on first composition.
+    val wasUserLoggedIn = remember { mutableStateOf(user != null && user?.isAnonymous == false) }
+    LaunchedEffect(user) {
+        val isUserLoggedIn = user != null && user?.isAnonymous == false
+        // If the user was logged in but isn't anymore, navigate to login.
+        if (wasUserLoggedIn.value && !isUserLoggedIn) {
+            rootNavController.navigate("login_flow") {
+                // Clear the back stack to prevent going back to the authenticated part of the app.
+                popUpTo("main_app") { inclusive = true }
+            }
+        }
+        wasUserLoggedIn.value = isUserLoggedIn
+    }
 
     Scaffold(
         topBar = {
@@ -77,16 +96,21 @@ fun AppScaffold(rootNavController: NavHostController) {
                         Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Menu")
                     }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                        if (user == null) {
+                        if (user == null || user?.isAnonymous == true) {
                             DropdownMenuItem(
                                 text = { Text("Zaloguj / Zarejestruj się") },
-                                // Use the ROOT controller to navigate outside the scaffold
-                                onClick = { rootNavController.navigate("login_flow"); showMenu = false }
+                                onClick = {
+                                    rootNavController.navigate("login_flow")
+                                    showMenu = false
+                                }
                             )
                         } else {
                             DropdownMenuItem(
                                 text = { Text("Wyloguj") },
-                                onClick = { authViewModel.logout(); showMenu = false }
+                                onClick = {
+                                    authViewModel.logout()
+                                    showMenu = false
+                                }
                             )
                         }
                         DropdownMenuItem(text = { Text("Ustawienia") }, onClick = { /* TODO */ ; showMenu = false })
@@ -107,7 +131,6 @@ fun AppScaffold(rootNavController: NavHostController) {
             }
         },
         bottomBar = {
-            // The BottomBar now correctly uses the local navController
             val navBackStackEntry by navController.currentBackStackEntryAsState()
             val currentDestination = navBackStackEntry?.destination
             NavigationBar {
@@ -128,7 +151,6 @@ fun AppScaffold(rootNavController: NavHostController) {
             }
         }
     ) { innerPadding ->
-        // The NavHost now correctly uses the same controller as the BottomBar and FAB
         NavHost(navController = navController, startDestination = Screen.Home.route, modifier = Modifier.padding(innerPadding)) {
             composable(Screen.Home.route) { InvoiceDashboardScreen(navController = navController) }
             composable(Screen.Companies.route) { CompanyListScreen() }

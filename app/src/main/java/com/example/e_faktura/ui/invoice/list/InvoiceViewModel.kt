@@ -1,8 +1,7 @@
-package com.example.e_faktura.ui.company.list
+package com.example.e_faktura.ui.invoice.list
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-// CORRECTED: Imports now point to the correct data.repository package
 import com.example.e_faktura.data.repository.CompanyRepository
 import com.example.e_faktura.data.repository.InvoiceRepository
 import com.example.e_faktura.model.Company
@@ -17,15 +16,13 @@ data class HomeUiState(
     val companies: List<Company> = emptyList()
 )
 
-class InvoiceViewModel(
+class InvoiceListViewModel(
     invoiceRepository: InvoiceRepository,
     companyRepository: CompanyRepository
 ) : ViewModel() {
 
     val uiState: StateFlow<HomeUiState> = combine(
-        // CORRECTED: Call the getInvoices() function instead of the property
         invoiceRepository.getInvoices(),
-        // CORRECTED: Call the getCompanies() function instead of the property
         companyRepository.getCompanies()
     ) { invoices, companies ->
         HomeUiState(invoices, companies)

@@ -1,11 +1,13 @@
 package com.example.e_faktura.ui.auth
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -16,8 +18,9 @@ import androidx.navigation.NavController
 fun RegistrationScreen(navController: NavController, authViewModel: AuthViewModel) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    val isLoading by authViewModel.isLoading.collectAsState()
-    val error by authViewModel.error.collectAsState()
+    var confirmPassword by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -48,23 +51,52 @@ fun RegistrationScreen(navController: NavController, authViewModel: AuthViewMode
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
+                imeAction = ImeAction.Next
+            ),
+            singleLine = true
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = confirmPassword,
+            onValueChange = { confirmPassword = it },
+            label = { Text("Potwierdź hasło") },
+            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password,
                 imeAction = ImeAction.Done
             ),
             singleLine = true
         )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        error?.let {
-            Text(text = it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(bottom = 8.dp))
-        }
+        Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = { authViewModel.register(email, password) },
+            onClick = {
+                if (password != confirmPassword) {
+                    Toast.makeText(context, "Hasła nie są takie same.", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+                isLoading = true
+                authViewModel.register(email, password,
+                    onSuccess = {
+                        // On success, navigate to the main app graph, clearing the login flow
+                        navController.navigate("main_app") {
+                            popUpTo("login_flow") { inclusive = true }
+                        }
+                        isLoading = false
+                    },
+                    onError = { message ->
+                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        isLoading = false
+                    }
+                )
+            },
             enabled = !isLoading,
             modifier = Modifier.fillMaxWidth()
         ) {
             if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
             } else {
                 Text("Zarejestruj się")
             }

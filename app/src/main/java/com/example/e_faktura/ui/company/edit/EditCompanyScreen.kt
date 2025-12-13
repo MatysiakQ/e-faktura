@@ -29,10 +29,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.e_faktura.model.Company
+import com.example.e_faktura.model.CompanyIcon
+import com.example.e_faktura.model.IconType
 import com.example.e_faktura.ui.AppViewModelProvider
 import com.example.e_faktura.ui.company.add.CompanyFormViewModel
-import com.example.e_faktura.ui.core.IconPickerDialog
-import com.example.e_faktura.ui.core.IconProvider
+import com.example.e_faktura.ui.components.IconPickerDialog
+import com.example.e_faktura.ui.components.IconProvider
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,7 +55,12 @@ fun EditCompanyScreen(
     var address by remember { mutableStateOf(companyToEdit.address) }
     var ownerFullName by remember { mutableStateOf(companyToEdit.ownerFullName) }
     var bankAccount by remember { mutableStateOf(companyToEdit.bankAccount) }
-    var iconString by remember { mutableStateOf(companyToEdit.icon) }
+    var companyIcon by remember {
+        val parts = companyToEdit.icon.split(":", limit = 2)
+        val type = if (parts.getOrNull(0) == "CUSTOM") IconType.CUSTOM else IconType.PREDEFINED
+        val value = parts.getOrNull(1) ?: "Business"
+        mutableStateOf(CompanyIcon(type, value))
+    }
     var showIconPicker by remember { mutableStateOf(false) }
 
     val companyFromGus by viewModel.searchResult.collectAsState()
@@ -62,8 +69,8 @@ fun EditCompanyScreen(
     if (showIconPicker) {
         IconPickerDialog(
             onDismiss = { showIconPicker = false },
-            onIconSelected = { selectedIconString ->
-                iconString = selectedIconString
+            onIconSelected = { selectedIcon ->
+                companyIcon = selectedIcon
                 showIconPicker = false
             }
         )
@@ -103,7 +110,7 @@ fun EditCompanyScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(Modifier.height(16.dp))
-                CompanyAvatar(iconString = iconString, onClick = { showIconPicker = true })
+                CompanyAvatar(companyIcon = companyIcon, onClick = { showIconPicker = true })
                 Spacer(Modifier.height(24.dp))
 
                 OutlinedTextField(
@@ -162,7 +169,7 @@ fun EditCompanyScreen(
                     onClick = {
                         val updatedCompany = companyToEdit.copy(
                             nip = nip, businessName = businessName, address = address,
-                            ownerFullName = ownerFullName, bankAccount = bankAccount, icon = iconString
+                            ownerFullName = ownerFullName, bankAccount = bankAccount, icon = "${companyIcon.type}:${companyIcon.value}"
                         )
                         viewModel.saveCompany(updatedCompany) // This should call update in a real app
                         Toast.makeText(context, "Zmiany zapisane", Toast.LENGTH_SHORT).show()
@@ -179,7 +186,7 @@ fun EditCompanyScreen(
 }
 
 @Composable
-private fun CompanyAvatar(iconString: String, onClick: () -> Unit) {
+private fun CompanyAvatar(companyIcon: CompanyIcon, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(100.dp)
@@ -188,19 +195,16 @@ private fun CompanyAvatar(iconString: String, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        val parts = iconString.split(":")
-        val type = parts.getOrNull(0)
-        val value = parts.getOrNull(1)
 
-        if (type == "CUSTOM" && value != null) {
+        if (companyIcon.type == IconType.CUSTOM) {
             AsyncImage(
-                model = Uri.parse(value),
+                model = Uri.parse(companyIcon.value),
                 contentDescription = "Logo firmy",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
         } else {
-            val iconVector = if (value != null) IconProvider.getIcon(value) else Icons.Outlined.Storefront
+            val iconVector = IconProvider.getIcon(companyIcon.value)
             Icon(
                 imageVector = iconVector,
                 contentDescription = "Logo firmy",

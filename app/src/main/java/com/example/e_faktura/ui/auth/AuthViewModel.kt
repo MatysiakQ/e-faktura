@@ -1,58 +1,107 @@
 package com.example.e_faktura.ui.auth
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.e_faktura.data.repository.AuthRepository
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.auth.ktx.userProfileChangeRequest
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
-class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
+class AuthViewModel : ViewModel() {
 
-    private val _user = MutableStateFlow<FirebaseUser?>(null)
-    val user: StateFlow<FirebaseUser?> = _user.asStateFlow()
+    private val auth: FirebaseAuth = Firebase.auth
+    private val storage = Firebase.storage
 
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    /**
+     * A reactive flow providing the current Firebase user.
+     * The UI should observe this to react to login/logout changes.
+     */
+    val user: StateFlow<FirebaseUser?> = callbackFlow {
+        val listener = FirebaseAuth.AuthStateListener { auth -> trySend(auth.currentUser) }
+        auth.addAuthStateListener(listener)
+        awaitClose { auth.removeAuthStateListener(listener) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), auth.currentUser)
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error.asStateFlow()
-
-    init {
-        _user.value = authRepository.getCurrentUser()
+    /**
+     * DEPRECATED: Synchronously gets the current user. Prefer observing the `user` flow.
+     * Provided for compatibility with existing UI code.
+     */
+    fun getCurrentUser(): FirebaseUser? {
+        return auth.currentUser
     }
 
-    fun login(email: String, pass: String) {
+    fun login(email: String, pass: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
             try {
-                _user.value = authRepository.login(email, pass)
+                auth.signInWithEmailAndPassword(email, pass).await()
+                onSuccess()
             } catch (e: Exception) {
-                _error.value = e.message
+                onError(e.message ?: "Błąd logowania")
             }
-            _isLoading.value = false
         }
     }
 
-    // This is the function `RegistrationScreen` will now call.
-    fun register(email: String, pass: String) {
+    fun register(email: String, pass: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
             try {
-                _user.value = authRepository.register(email, pass)
+                auth.createUserWithEmailAndPassword(email, pass).await()
+                onSuccess()
             } catch (e: Exception) {
-                _error.value = e.message
+                onError(e.message ?: "Błąd rejestracji")
             }
-            _isLoading.value = false
+        }
+    }
+
+    fun updateProfilePicture(uri: Uri, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            val currentUser = auth.currentUser
+            if (currentUser == null) {
+                onError("Użytkownik nie jest zalogowany.")
+                return@launch
+            }
+            try {
+                val storageRef = storage.reference.child("profile_pictures/${currentUser.uid}")
+                val downloadUrl = storageRef.putFile(uri).await().storage.downloadUrl.await()
+                val profileUpdates = userProfileChangeRequest { photoUri = downloadUrl }
+                currentUser.updateProfile(profileUpdates).await()
+                onSuccess()
+            } catch (e: Exception) {
+                onError(e.message ?: "Błąd podczas przesyłania zdjęcia.")
+            }
+        }
+    }
+
+    fun changePassword(newPass: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            val currentUser = auth.currentUser
+            if (currentUser == null) {
+                onError("Użytkownik nie jest zalogowany.")
+                return@launch
+            }
+            try {
+                currentUser.updatePassword(newPass).await()
+                onSuccess()
+            } catch (e: Exception) {
+                onError(e.message ?: "Wystąpił błąd podczas zmiany hasła.")
+            }
         }
     }
 
     fun logout() {
-        authRepository.logout()
-        _user.value = null
+        auth.signOut()
+        // For guest mode, immediately create a new anonymous session
+        viewModelScope.launch {
+            auth.signInAnonymously()
+        }
     }
 }

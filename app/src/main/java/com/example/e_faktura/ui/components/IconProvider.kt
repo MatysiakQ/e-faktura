@@ -1,4 +1,4 @@
-package com.example.e_faktura.ui.core
+package com.example.e_faktura.ui.components
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build

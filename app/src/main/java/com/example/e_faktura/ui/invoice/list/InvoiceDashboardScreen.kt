@@ -1,6 +1,5 @@
 package com.example.e_faktura.ui.invoice.list
 
-// CORRECTED: Added missing layout imports
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -26,15 +25,18 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.e_faktura.model.Invoice
 import com.example.e_faktura.ui.AppViewModelProvider
-import com.example.e_faktura.ui.core.FinancialDashboardCard
-import com.example.e_faktura.ui.invoice.InvoiceViewModel
+import com.example.e_faktura.ui.components.FinancialDashboardCard
 
 @Composable
 fun InvoiceDashboardScreen(
     navController: NavController,
-    invoiceViewModel: InvoiceViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    invoiceViewModel: InvoiceListViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    val invoices by invoiceViewModel.invoices.collectAsState()
+    val uiState by invoiceViewModel.uiState.collectAsState()
+    val invoices = uiState.invoices
+
+    val totalAmount = invoices.sumOf { it.amount }
+    val unpaidAmount = invoices.filter { !it.isPaid }.sumOf { it.amount }
 
     LazyColumn(
         modifier = Modifier
@@ -43,7 +45,11 @@ fun InvoiceDashboardScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            FinancialDashboardCard()
+            FinancialDashboardCard(
+                title = "Saldo faktur",
+                primaryAmount = String.format("%,.2f", unpaidAmount),
+                secondaryAmount = String.format("%,.2f", totalAmount)
+            )
         }
 
         item {
@@ -78,7 +84,7 @@ private fun EmptyState() {
         Icon(
             imageVector = Icons.Filled.ReceiptLong,
             contentDescription = "Brak faktur",
-            modifier = Modifier.size(80.dp), // This will now resolve
+            modifier = Modifier.size(80.dp), 
             tint = MaterialTheme.colorScheme.surfaceVariant
         )
         Text(
@@ -103,7 +109,7 @@ private fun InvoiceItem(invoice: Invoice) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(modifier = Modifier.height(4.dp)) // This will now resolve
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Kwota: ${String.format("%,.2f", invoice.amount)} PLN",
                 style = MaterialTheme.typography.bodyLarge

@@ -29,9 +29,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.e_faktura.model.Company
+import com.example.e_faktura.model.CompanyIcon
+import com.example.e_faktura.model.IconType
 import com.example.e_faktura.ui.AppViewModelProvider
-import com.example.e_faktura.ui.core.IconPickerDialog
-import com.example.e_faktura.ui.core.IconProvider
+import com.example.e_faktura.ui.components.IconPickerDialog
+import com.example.e_faktura.ui.components.IconProvider
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,7 +49,7 @@ fun AddCompanyScreen(
     var address by remember { mutableStateOf("") }
     var ownerFullName by remember { mutableStateOf("") }
     var bankAccount by remember { mutableStateOf("") }
-    var iconString by remember { mutableStateOf("PREDEFINED:Business") }
+    var companyIcon by remember { mutableStateOf(CompanyIcon(IconType.PREDEFINED, "Business")) }
     var showIconPicker by remember { mutableStateOf(false) }
 
     val companyFromGus by viewModel.searchResult.collectAsState()
@@ -56,8 +58,8 @@ fun AddCompanyScreen(
     if (showIconPicker) {
         IconPickerDialog(
             onDismiss = { showIconPicker = false },
-            onIconSelected = { selectedIconString ->
-                iconString = selectedIconString
+            onIconSelected = { selectedIcon ->
+                companyIcon = selectedIcon
                 showIconPicker = false
             }
         )
@@ -97,7 +99,7 @@ fun AddCompanyScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(Modifier.height(16.dp))
-                CompanyAvatar(iconString = iconString, onClick = { showIconPicker = true })
+                CompanyAvatar(companyIcon = companyIcon, onClick = { showIconPicker = true })
                 Spacer(Modifier.height(24.dp))
 
                 OutlinedTextField(
@@ -157,7 +159,7 @@ fun AddCompanyScreen(
                         val newCompany = Company(
                             id = UUID.randomUUID().toString(),
                             nip = nip, businessName = businessName, address = address,
-                            ownerFullName = ownerFullName, bankAccount = bankAccount, icon = iconString
+                            ownerFullName = ownerFullName, bankAccount = bankAccount, icon = "${companyIcon.type}:${companyIcon.value}"
                         )
                         viewModel.saveCompany(newCompany)
                         Toast.makeText(context, "Firma dodana", Toast.LENGTH_SHORT).show()
@@ -174,7 +176,7 @@ fun AddCompanyScreen(
 }
 
 @Composable
-private fun CompanyAvatar(iconString: String, onClick: () -> Unit) {
+private fun CompanyAvatar(companyIcon: CompanyIcon, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(100.dp)
@@ -183,19 +185,16 @@ private fun CompanyAvatar(iconString: String, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        val parts = iconString.split(":")
-        val type = parts.getOrNull(0)
-        val value = parts.getOrNull(1)
 
-        if (type == "CUSTOM" && value != null) {
+        if (companyIcon.type == IconType.CUSTOM) {
             AsyncImage(
-                model = Uri.parse(value),
+                model = Uri.parse(companyIcon.value),
                 contentDescription = "Logo firmy",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
         } else {
-            val iconVector = if (value != null) IconProvider.getIcon(value) else Icons.Outlined.Storefront
+            val iconVector = IconProvider.getIcon(companyIcon.value)
             Icon(
                 imageVector = iconVector,
                 contentDescription = "Logo firmy",
