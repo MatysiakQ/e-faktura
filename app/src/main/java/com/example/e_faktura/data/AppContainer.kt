@@ -2,7 +2,7 @@ package com.example.e_faktura.data
 
 import android.content.Context
 import com.example.e_faktura.data.api.GusService
-import com.example.e_faktura.data.repository.AuthRepository
+import com.example.e_faktura.data.local.AppDatabase
 import com.example.e_faktura.data.repository.CompanyRepository
 import com.example.e_faktura.data.repository.GusRepository
 import com.example.e_faktura.data.repository.InvoiceRepository
@@ -12,46 +12,51 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 interface AppContainer {
-    val authRepository: AuthRepository
     val companyRepository: CompanyRepository
     val invoiceRepository: InvoiceRepository
     val gusRepository: GusRepository
 }
 
-class DefaultAppContainer(private val context: Context) : AppContainer {
-
-    private val firebaseAuth: FirebaseAuth by lazy {
-        FirebaseAuth.getInstance()
-    }
+class AppDataContainer(private val context: Context) : AppContainer {
 
     private val firestore: FirebaseFirestore by lazy {
         FirebaseFirestore.getInstance()
     }
 
-    private val retrofit: Retrofit by lazy {
+    private val firebaseAuth: FirebaseAuth by lazy {
+        FirebaseAuth.getInstance()
+    }
+
+    // Create Retrofit service for GUS API
+    private val gusService: GusService by lazy {
         Retrofit.Builder()
-            .baseUrl("https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc/")
+            .baseUrl("https://your-gus-api-base-url.com/") // <-- IMPORTANT: Replace with actual API URL
             .addConverterFactory(GsonConverterFactory.create())
             .build()
+            .create(GusService::class.java)
     }
-
-    private val gusService: GusService by lazy {
-        retrofit.create(GusService::class.java)
-    }
-
-    override val authRepository: AuthRepository by lazy {
-        AuthRepository(firebaseAuth, firestore)
+    
+    private val database: AppDatabase by lazy {
+        AppDatabase.getDatabase(context)
     }
 
     override val companyRepository: CompanyRepository by lazy {
-        CompanyRepository(firestore, firebaseAuth)
+        CompanyRepository(
+            companyDao = database.companyDao(),
+            firestore = firestore,
+            firebaseAuth = firebaseAuth
+        )
     }
 
     override val invoiceRepository: InvoiceRepository by lazy {
-        InvoiceRepository(firestore, firebaseAuth)
+        InvoiceRepository(
+            invoiceDao = database.invoiceDao(),
+            firestore = firestore,
+            firebaseAuth = firebaseAuth
+        )
     }
 
     override val gusRepository: GusRepository by lazy {
-        GusRepository(gusService)
+        GusRepository(gusService = gusService)
     }
 }

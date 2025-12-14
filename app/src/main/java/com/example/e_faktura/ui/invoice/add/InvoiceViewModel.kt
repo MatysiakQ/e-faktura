@@ -9,9 +9,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 
 data class AddInvoiceUiState(
@@ -46,12 +49,20 @@ class InvoiceViewModel(
     }
 
     private fun generateNextInvoiceNumber() {
-        // In a real app, you'd fetch the last invoice number from the repository
-        val year = LocalDate.now().year
-        val month = LocalDate.now().monthValue
-        // This is a placeholder. A real implementation needs a proper sequence.
-        val nextId = (Math.random() * 100).toInt() + 1 
-        _nextInvoiceNumber.value = "FV/$year/$month/${String.format("%02d", nextId)}"
+        viewModelScope.launch {
+            val allInvoices = invoiceRepository.getInvoices().first()
+            val now = LocalDate.now()
+            val year = now.year
+            val month = now.monthValue
+
+            val invoicesThisMonth = allInvoices.filter {
+                val issueDate = Instant.ofEpochMilli(it.date).atZone(ZoneId.systemDefault()).toLocalDate()
+                issueDate.year == year && issueDate.monthValue == month
+            }
+            
+            val nextId = invoicesThisMonth.size + 1
+            _nextInvoiceNumber.value = "FV/$year/$month/${String.format("%02d", nextId)}"
+        }
     }
 
     fun onNipToSearchChange(nip: String) {
@@ -81,7 +92,7 @@ class InvoiceViewModel(
             val result = GusData(
                 name = "Mock Klient Sp. z o.o.",
                 nip = nip,
-                address = "ul. Klientów 123, 00-002 Warszawa"
+                address = "ul. Testowa 1, 00-001 Warszawa"
             )
             _gusSearchResult.value = result
             _uiState.update {
@@ -100,13 +111,13 @@ class InvoiceViewModel(
             val currentState = _uiState.value
             val invoice = Invoice(
                 id = UUID.randomUUID().toString(),
-                invoiceNumber = _nextInvoiceNumber.value, 
+                invoiceNumber = _nextInvoiceNumber.value,
                 buyerName = currentState.buyerName,
                 buyerNip = currentState.buyerNip,
                 amount = currentState.amount.toDoubleOrNull() ?: 0.0,
                 date = currentState.issueDate,
-                // In a real app, you might want to store the due date as well
-                isPaid = false 
+                dueDate = currentState.paymentDueDate,
+                isPaid = false
             )
             invoiceRepository.addInvoice(invoice)
             // Regenerate number for the next invoice

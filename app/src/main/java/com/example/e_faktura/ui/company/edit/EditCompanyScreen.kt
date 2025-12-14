@@ -27,61 +27,51 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.e_faktura.model.Company
 import com.example.e_faktura.model.CompanyIcon
 import com.example.e_faktura.model.IconType
 import com.example.e_faktura.ui.AppViewModelProvider
+import com.example.e_faktura.ui.company.add.CompanyFormEvent
 import com.example.e_faktura.ui.company.add.CompanyFormViewModel
+import com.example.e_faktura.ui.company.add.UiEvent
 import com.example.e_faktura.ui.components.IconPickerDialog
 import com.example.e_faktura.ui.components.IconProvider
-import java.util.UUID
+import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditCompanyScreen(
-    companyId: String,
-    onCompanyUpdated: () -> Unit,
+    navController: NavController,
     viewModel: CompanyFormViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
+    val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-
-    // In a real app, you would fetch the company by ID from the ViewModel.
-    // For this refactor, we simulate this by creating a sample company.
-    val companyToEdit = Company(id = companyId, businessName = "Existing Company To Edit") 
-
-    var nip by remember { mutableStateOf(companyToEdit.nip) }
-    var businessName by remember { mutableStateOf(companyToEdit.businessName) }
-    var address by remember { mutableStateOf(companyToEdit.address) }
-    var ownerFullName by remember { mutableStateOf(companyToEdit.ownerFullName) }
-    var bankAccount by remember { mutableStateOf(companyToEdit.bankAccount) }
-    var companyIcon by remember {
-        val parts = companyToEdit.icon.split(":", limit = 2)
-        val type = if (parts.getOrNull(0) == "CUSTOM") IconType.CUSTOM else IconType.PREDEFINED
-        val value = parts.getOrNull(1) ?: "Business"
-        mutableStateOf(CompanyIcon(type, value))
-    }
     var showIconPicker by remember { mutableStateOf(false) }
 
-    val companyFromGus by viewModel.searchResult.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
+    LaunchedEffect(key1 = true) {
+        viewModel.uiEvent.collectLatest { event ->
+            when (event) {
+                UiEvent.SaveSuccess -> {
+                    Toast.makeText(context, "Zmiany zapisane", Toast.LENGTH_SHORT).show()
+                    navController.popBackStack()
+                }
+                is UiEvent.ShowError -> {
+                    Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
 
     if (showIconPicker) {
         IconPickerDialog(
             onDismiss = { showIconPicker = false },
             onIconSelected = { selectedIcon ->
-                companyIcon = selectedIcon
+                val iconString = "${selectedIcon.type}:${selectedIcon.value}"
+                viewModel.onEvent(CompanyFormEvent.IconChanged(iconString))
                 showIconPicker = false
             }
         )
-    }
-
-    LaunchedEffect(companyFromGus) {
-        companyFromGus?.let {
-            nip = it.nip
-            businessName = it.businessName
-            address = it.address
-        }
     }
 
     Scaffold(
@@ -89,7 +79,7 @@ fun EditCompanyScreen(
             TopAppBar(
                 title = { Text("Edytuj firmę") },
                 navigationIcon = {
-                    IconButton(onClick = onCompanyUpdated) {
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Wróć")
                     }
                 }
@@ -102,7 +92,7 @@ fun EditCompanyScreen(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
         ) {
-             if(isLoading) {
+            if (state.isLoading) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
             Column(
@@ -110,35 +100,37 @@ fun EditCompanyScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(Modifier.height(16.dp))
-                CompanyAvatar(companyIcon = companyIcon, onClick = { showIconPicker = true })
+                CompanyAvatar(iconString = state.icon, onClick = { showIconPicker = true })
                 Spacer(Modifier.height(24.dp))
 
                 OutlinedTextField(
-                    value = nip,
-                    onValueChange = { nip = it },
+                    value = state.nip,
+                    onValueChange = { viewModel.onEvent(CompanyFormEvent.NipChanged(it)) },
                     label = { Text("NIP") },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                     trailingIcon = {
-                        IconButton(onClick = { if (nip.isNotBlank()) viewModel.loadDataFromNip(nip) }) {
+                        IconButton(onClick = { viewModel.loadDataFromNip(state.nip) }) {
                             Icon(Icons.Default.Search, contentDescription = "Szukaj w GUS")
                         }
-                    }
+                    },
+                    isError = state.error?.contains("NIP") == true
                 )
                 Spacer(Modifier.height(16.dp))
 
                 OutlinedTextField(
-                    value = businessName,
-                    onValueChange = { businessName = it },
+                    value = state.businessName,
+                    onValueChange = { viewModel.onEvent(CompanyFormEvent.BusinessNameChanged(it)) },
                     label = { Text("Nazwa Firmy") },
                     modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next)
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
+                    isError = state.error?.contains("Nazwa") == true
                 )
                 Spacer(Modifier.height(16.dp))
 
                 OutlinedTextField(
-                    value = address,
-                    onValueChange = { address = it },
+                    value = state.address,
+                    onValueChange = { viewModel.onEvent(CompanyFormEvent.AddressChanged(it)) },
                     label = { Text("Adres (Ulica, Kod, Miasto)") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2,
@@ -148,8 +140,8 @@ fun EditCompanyScreen(
                 Spacer(Modifier.height(16.dp))
 
                 OutlinedTextField(
-                    value = ownerFullName,
-                    onValueChange = { ownerFullName = it },
+                    value = state.ownerFullName,
+                    onValueChange = { viewModel.onEvent(CompanyFormEvent.OwnerFullNameChanged(it)) },
                     label = { Text("Imię i nazwisko właściciela") },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next)
@@ -157,8 +149,8 @@ fun EditCompanyScreen(
                 Spacer(Modifier.height(16.dp))
 
                 OutlinedTextField(
-                    value = bankAccount,
-                    onValueChange = { bankAccount = it },
+                    value = state.bankAccount,
+                    onValueChange = { viewModel.onEvent(CompanyFormEvent.BankAccountChanged(it)) },
                     label = { Text("Numer konta bankowego") },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
@@ -166,16 +158,10 @@ fun EditCompanyScreen(
                 Spacer(Modifier.height(32.dp))
 
                 Button(
-                    onClick = {
-                        val updatedCompany = companyToEdit.copy(
-                            nip = nip, businessName = businessName, address = address,
-                            ownerFullName = ownerFullName, bankAccount = bankAccount, icon = "${companyIcon.type}:${companyIcon.value}"
-                        )
-                        viewModel.saveCompany(updatedCompany) // This should call update in a real app
-                        Toast.makeText(context, "Zmiany zapisane", Toast.LENGTH_SHORT).show()
-                        onCompanyUpdated()
-                    },
-                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                    onClick = { viewModel.saveCompany() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
                 ) {
                     Text("Zapisz zmiany")
                 }
@@ -186,7 +172,7 @@ fun EditCompanyScreen(
 }
 
 @Composable
-private fun CompanyAvatar(companyIcon: CompanyIcon, onClick: () -> Unit) {
+private fun CompanyAvatar(iconString: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(100.dp)
@@ -195,6 +181,10 @@ private fun CompanyAvatar(companyIcon: CompanyIcon, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
+        val parts = iconString.split(":", limit = 2)
+        val type = if (parts.getOrNull(0) == "CUSTOM") IconType.CUSTOM else IconType.PREDEFINED
+        val value = parts.getOrNull(1) ?: "Business"
+        val companyIcon = CompanyIcon(type, value)
 
         if (companyIcon.type == IconType.CUSTOM) {
             AsyncImage(

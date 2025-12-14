@@ -1,14 +1,6 @@
 package com.example.e_faktura.ui.auth
 
-import android.net.Uri
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,249 +9,84 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
-import com.example.e_faktura.R
 import com.example.e_faktura.ui.AppViewModelProvider
+import com.example.e_faktura.ui.navigation.Screen
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyAccountScreen(
     navController: NavController,
     authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val user by authViewModel.user.collectAsState()
-    val uiState by authViewModel.uiState.collectAsState()
-    val context = LocalContext.current
 
-    var showChangePasswordDialog by remember { mutableStateOf(false) }
-
-    val imagePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-        onResult = { uri: Uri? ->
-            authViewModel.updateProfilePicture(uri)
-        }
-    )
-
-    LaunchedEffect(uiState) {
-        if (uiState.passwordChangeSuccess) {
-            Toast.makeText(context, "Hasło zostało zmienione", Toast.LENGTH_SHORT).show()
-            showChangePasswordDialog = false
-            authViewModel.resetAuthState()
-        }
-        if (uiState.profileUpdateSuccess) {
-            Toast.makeText(context, "Zdjęcie profilowe zaktualizowane", Toast.LENGTH_SHORT).show()
-            authViewModel.resetAuthState()
-        }
-        uiState.error?.let {
-            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
-            authViewModel.resetAuthState()
-        }
-    }
-
-    if (showChangePasswordDialog) {
-        ChangePasswordDialog(
-            onDismiss = { showChangePasswordDialog = false },
-            uiState = uiState,
-            onConfirm = { newPassword -> authViewModel.changePassword(newPassword) }
-        )
-    }
-
-    Scaffold(
-        containerColor = Color.White,
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Moje Konto", fontWeight = FontWeight.SemiBold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Wróć")
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
-            Spacer(Modifier.height(24.dp))
-
-            ProfileHeroSection(user?.photoUrl, user?.email) { 
-                imagePicker.launch("image/*")
-            }
-            
-            Spacer(Modifier.height(48.dp))
-
-            SecuritySection { showChangePasswordDialog = true }
-
-            Spacer(Modifier.weight(1f))
-
-            Button(
-                onClick = { authViewModel.logout() },
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                modifier = Modifier.padding(vertical = 16.dp)
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                Text("Wyloguj się")
+                Icon(imageVector = Icons.Filled.Person, contentDescription = "Ikona użytkownika", modifier = Modifier.size(80.dp), tint = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = user?.email ?: "Brak danych",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = if (user?.isAnonymous == true) "Konto gościnne" else "Zarejestrowany użytkownik",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
-    }
-}
 
-@Composable
-private fun ProfileHeroSection(photoUrl: Uri?, email: String?, onEditClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Box(contentAlignment = Alignment.BottomEnd) {
-            AsyncImage(
-                model = photoUrl ?: R.drawable.logo,
-                contentDescription = "Zdjęcie profilowe",
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .border(2.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), CircleShape),
-                contentScale = ContentScale.Crop
-            )
-            IconButton(
-                onClick = onEditClick,
-                modifier = Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.primary)
-            ) {
-                Icon(Icons.Default.Edit, contentDescription = "Zmień zdjęcie", tint = Color.White)
-            }
-        }
-        Text(email ?: "", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-    }
-}
+        Spacer(modifier = Modifier.height(32.dp))
 
-@Composable
-private fun SecuritySection(onChangePasswordClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Zabezpieczenia", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(16.dp))
+        Button(
+            onClick = {
+                authViewModel.logout()
+                navController.navigate(Screen.Login.route) {
+                    // Wyczyść cały backstack, aby użytkownik nie mógł wrócić do ekranu konta
+                    popUpTo(navController.graph.id) {
+                        inclusive = true
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.width(16.dp))
-                Text("Hasło", modifier = Modifier.weight(1f))
-                TextButton(onClick = onChangePasswordClick) {
-                    Text("ZMIEŃ")
-                }
+                Icon(imageVector = Icons.AutoMirrored.Filled.Logout, contentDescription = "Wyloguj")
+                Spacer(modifier = Modifier.size(8.dp))
+                Text("Wyloguj")
             }
         }
     }
-}
-
-@Composable
-private fun ChangePasswordDialog(
-    onDismiss: () -> Unit,
-    uiState: AuthUiState,
-    onConfirm: (String) -> Unit
-) {
-    var newPassword by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Zmień hasło") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = newPassword,
-                    onValueChange = { newPassword = it },
-                    label = { Text("Nowe hasło") },
-                    modifier = Modifier.fillMaxWidth(),
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, "Toggle password visibility")
-                        }
-                    }
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = confirmPassword,
-                    onValueChange = { confirmPassword = it },
-                    label = { Text("Potwierdź hasło") },
-                    modifier = Modifier.fillMaxWidth(),
-                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (newPassword.length < 6) {
-                        Toast.makeText(context, "Hasło musi mieć co najmniej 6 znaków.", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    if (newPassword != confirmPassword) {
-                        Toast.makeText(context, "Hasła nie są takie same.", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    onConfirm(newPassword)
-                },
-                enabled = !uiState.isLoading
-            ) {
-                 if (uiState.isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                } else {
-                    Text("Zapisz")
-                }
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } }
-    )
 }

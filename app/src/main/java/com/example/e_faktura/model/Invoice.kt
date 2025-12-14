@@ -1,19 +1,18 @@
 package com.example.e_faktura.model
 
-import android.os.Parcelable
-import kotlinx.parcelize.Parcelize
-import kotlinx.serialization.Serializable
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import com.google.firebase.firestore.PropertyName
 
-@Serializable
-@Parcelize
+@Entity(tableName = "invoices")
 data class Invoice(
-    val id: String = "",
-    // ADDED: The missing invoice number field
-    val invoiceNumber: String = "",
-    val sellerId: String = "",
-    val buyerName: String = "",
-    val buyerNip: String = "",
+    @PrimaryKey val id: String = "",
+    @get:PropertyName("invoice_number") @set:PropertyName("invoice_number") var invoiceNumber: String = "",
+    @get:PropertyName("buyer_nip") @set:PropertyName("buyer_nip") var buyerNip: String = "",
+    @get:PropertyName("buyer_name") @set:PropertyName("buyer_name") var buyerName: String = "",
     val amount: Double = 0.0,
-    val date: Long = 0L,
-    val isPaid: Boolean = false
-) : Parcelable
+    val date: Long = System.currentTimeMillis(),
+    @get:PropertyName("due_date") @set:PropertyName("due_date") var dueDate: Long = System.currentTimeMillis() + 14 * 24 * 60 * 60 * 1000, // Default 14 days
+    @get:PropertyName("is_paid") @set:PropertyName("is_paid") var isPaid: Boolean = false,
+    val type: String = "SALE" // Default to SALE
+)

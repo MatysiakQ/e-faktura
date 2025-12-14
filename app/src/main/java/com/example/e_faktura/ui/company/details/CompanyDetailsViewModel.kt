@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 data class CompanyDetailsUiState(
@@ -40,7 +41,10 @@ class CompanyDetailsViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
-                val company = companyRepository.getCompanyById(companyId).firstOrNull()
+                val companyFlow = companyRepository.getCompanies().map {
+                    it.firstOrNull { company -> company.id == companyId }
+                }
+                val company = companyFlow.firstOrNull()
                 if (company != null) {
                     _uiState.value = CompanyDetailsUiState(company = company, isLoading = false)
                 } else {

@@ -90,7 +90,7 @@ fun AppScaffold(rootNavController: NavHostController) {
                     title = { Text(if (isLoggedIn) user?.email ?: "e-Faktura" else "Witaj, Gościu") },
                     actions = {
                         IconButton(onClick = { showMenu = !showMenu }) {
-                            Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Menu")
+                            Icon(imageVector = Icons.Filled.MoreVert, contentDescription = "Menu")
                         }
                         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                             if (isLoggedIn) {
@@ -127,7 +127,7 @@ fun AppScaffold(rootNavController: NavHostController) {
                         Screen.Companies.route -> navController.navigate(Screen.AddCompany.route)
                     }
                 }) {
-                    Icon(Icons.Default.Add, contentDescription = "Dodaj")
+                    Icon(Icons.Filled.Add, contentDescription = "Dodaj")
                 }
             }
         },
@@ -157,8 +157,8 @@ fun AppScaffold(rootNavController: NavHostController) {
         NavHost(navController = navController, startDestination = Screen.Home.route, modifier = Modifier.padding(innerPadding)) {
             composable(Screen.Home.route) { InvoiceDashboardScreen(navController = navController) }
             composable(Screen.Companies.route) { CompanyListScreen(navController = navController) }
-            composable(Screen.Statistics.route) { StatisticsScreen(navController) }
-            composable(Screen.AddCompany.route) { AddCompanyScreen(onCompanyAdded = { navController.popBackStack() }) }
+            composable(Screen.Statistics.route) { StatisticsScreen(navController = navController, statisticsViewModel = viewModel(factory = AppViewModelProvider.Factory), onOverdueClick = {}) }
+            composable(Screen.AddCompany.route) { AddCompanyScreen(navController = navController) }
             composable(Screen.AddInvoice.route) { AddInvoiceScreen(navController = navController, onInvoiceAdded = { navController.popBackStack() }) }
             composable(Screen.QrScanner.route) {
                 QrCodeScannerScreen(navController = navController, onQrCodeScanned = { scannedNip ->

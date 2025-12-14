@@ -1,20 +1,24 @@
 package com.example.e_faktura.model
 
-import android.os.Parcelable
-import kotlinx.parcelize.Parcelize
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import com.google.firebase.firestore.ServerTimestamp
+import java.util.Date
 
-/**
- * UNIFIED data model for a company.
- * This is the single source of truth for all company-related data in the app.
- */
-@Parcelize
+@Entity(tableName = "companies")
 data class Company(
+    @PrimaryKey
     val id: String = "",
-    val nip: String = "",
     val businessName: String = "",
+    val nip: String = "",
     val address: String = "",
+    val postalCode: String = "",
+    val city: String = "",
     val ownerFullName: String = "",
     val bankAccount: String = "",
-    val type: String = "",
-    val icon: String = ""
-): Parcelable
+    val icon: String = "PREDEFINED:Business",
+    val userId: String = "",
+
+    @ServerTimestamp
+    val createdAt: Date = Date()
+)
