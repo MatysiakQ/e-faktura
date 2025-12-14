@@ -6,10 +6,12 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.e_faktura.EfakturaApplication
 import com.example.e_faktura.ui.auth.AuthViewModel
-import com.example.e_faktura.ui.company.CompanyViewModel
 import com.example.e_faktura.ui.company.add.CompanyFormViewModel
+import com.example.e_faktura.ui.company.details.CompanyDetailsViewModel
+import com.example.e_faktura.ui.company.list.CompanyListViewModel
 import com.example.e_faktura.ui.invoice.add.InvoiceViewModel
 import com.example.e_faktura.ui.invoice.list.InvoiceListViewModel
+import androidx.lifecycle.createSavedStateHandle
 
 object AppViewModelProvider {
     val Factory = viewModelFactory {
@@ -18,7 +20,14 @@ object AppViewModelProvider {
         }
 
         initializer {
-            CompanyViewModel(efakturaApplication().container.companyRepository)
+            CompanyListViewModel(efakturaApplication().container.companyRepository)
+        }
+
+        initializer {
+            CompanyDetailsViewModel(
+                this.createSavedStateHandle(),
+                efakturaApplication().container.companyRepository
+            )
         }
 
         initializer {

@@ -10,7 +10,6 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.ui.graphics.vector.ImageVector
 
 object IconProvider {
-    // Replacement map using only core icons
     val icons = mapOf(
         "Apartment" to Icons.Filled.Home,
         "Store" to Icons.Filled.Home,
@@ -24,12 +23,12 @@ object IconProvider {
         "Palette" to Icons.Filled.Star,
         "Handyman" to Icons.Filled.Build,
         "MedicalServices" to Icons.Filled.Info,
-        "Business" to Icons.Filled.Home, // Replaced as per instructions
+        "Business" to Icons.Filled.Home,
         "Person" to Icons.Filled.Person,
         "AccountBalance" to Icons.Filled.Info
     )
 
     fun getIcon(name: String): ImageVector {
-        return icons[name] ?: Icons.Filled.Home // Fallback to a safe, core icon
+        return icons[name] ?: Icons.Filled.Home
     }
 }

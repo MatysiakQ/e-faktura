@@ -1,40 +1,71 @@
-package com.example.e_faktura
+package com.example.e_faktura.ui.dashboard // Upewnij się, że pakiet jest zgodny z Twoją strukturą folderów
 
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row // Dodano brakujący import
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width // Dodano brakujący import
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import coil.compose.rememberAsyncImagePainter
+import coil.compose.AsyncImage
+import com.example.e_faktura.R // Upewnij się, że ten import wskazuje na Twój plik R (resource)
 import com.example.e_faktura.ui.AppViewModelProvider
+import com.example.e_faktura.ui.auth.AuthUiState
 import com.example.e_faktura.ui.auth.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,53 +74,47 @@ fun MyAccountScreen(
     navController: NavController,
     authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    val currentUser by authViewModel.user.collectAsState()
+    val user by authViewModel.user.collectAsState()
+    val uiState by authViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
     var showChangePasswordDialog by remember { mutableStateOf(false) }
 
-    val imagePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-        onResult = { uri: Uri? ->
-            uri?.let {
-                authViewModel.updateProfilePicture(it, 
-                    onSuccess = { Toast.makeText(context, "Zdjęcie profilowe zaktualizowane", Toast.LENGTH_SHORT).show() },
-                    onError = { message -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show() }
-                )
-            }
+    LaunchedEffect(uiState) {
+        if (uiState.passwordChangeSuccess) {
+            Toast.makeText(context, "Hasło zostało zmienione", Toast.LENGTH_SHORT).show()
+            showChangePasswordDialog = false
+            authViewModel.resetAuthState()
         }
-    )
+        if (uiState.profileUpdateSuccess) {
+            Toast.makeText(context, "Zdjęcie profilowe zaktualizowane", Toast.LENGTH_SHORT).show()
+            authViewModel.resetAuthState()
+        }
+        uiState.error?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            authViewModel.resetAuthState()
+        }
+    }
 
     if (showChangePasswordDialog) {
         ChangePasswordDialog(
             onDismiss = { showChangePasswordDialog = false },
-            onConfirm = { newPassword ->
-                authViewModel.changePassword(newPassword, 
-                    onSuccess = {
-                        Toast.makeText(context, "Hasło zostało zmienione", Toast.LENGTH_SHORT).show()
-                        showChangePasswordDialog = false
-                    },
-                    onError = { message -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show() }
-                )
-            }
+            uiState = uiState,
+            onConfirm = { newPassword -> authViewModel.changePassword(newPassword) }
         )
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = Color.White,
         topBar = {
             CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        "Profil",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
-                    )
-                },
+                title = { Text("Moje Konto", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Wróć")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)
             )
         }
     ) { paddingValues ->
@@ -97,156 +122,83 @@ fun MyAccountScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            currentUser?.let { user ->
-                if (!user.isAnonymous) {
-                    Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(24.dp))
 
-                    Box(contentAlignment = Alignment.BottomEnd) {
-                        Image(
-                            painter = rememberAsyncImagePainter(
-                                model = user.photoUrl ?: R.drawable.logo,
-                                error = rememberAsyncImagePainter(R.drawable.logo)
-                            ),
-                            contentDescription = "Zdjęcie profilowe",
-                            modifier = Modifier
-                                .size(150.dp)
-                                .clip(CircleShape)
-                                .border(4.dp, MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                                .clickable { imagePicker.launch("image/*") },
-                            contentScale = ContentScale.Crop
-                        )
+            // --- Hero Section ---
+            ProfileHeroSection(user?.photoUrl, user?.email) {
+                authViewModel.updateProfilePicture(it)
+            }
 
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary,
-                            shadowElevation = 6.dp,
-                            modifier = Modifier
-                                .padding(bottom = 6.dp, end = 6.dp)
-                                .size(40.dp)
-                                .clickable { imagePicker.launch("image/*") }
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Filled.CameraAlt,
-                                    contentDescription = "Zmień zdjęcie",
-                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                    }
+            Spacer(Modifier.height(48.dp))
 
-                    Spacer(modifier = Modifier.height(16.dp))
+            // --- Security Section ---
+            SecuritySection { showChangePasswordDialog = true }
 
-                    Text(
-                        text = user.email ?: "Brak adresu email",
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Konto użytkownika",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+            Spacer(Modifier.weight(1f))
 
-                    Spacer(modifier = Modifier.height(40.dp))
-
-                    SectionContainer(title = "Dane logowania") {
-                        ReadOnlyField(
-                            label = "Adres Email",
-                            value = user.email ?: "",
-                            icon = Icons.Filled.Email
-                        )
-
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 12.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Lock,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Hasło",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = "••••••••••••",
-                                    style = MaterialTheme.typography.bodyLarge.copy(
-                                        fontWeight = FontWeight.Medium,
-                                        letterSpacing = 2.sp
-                                    ),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-
-                            TextButton(onClick = { showChangePasswordDialog = true }) {
-                                Text("ZMIEŃ", fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                } else {
-                    // Optional: Show a message for anonymous users
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Zaloguj się, aby zarządzać kontem.")
-                    }
-                }
-
-            } ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+            // --- Danger Zone ---
+            Button(
+                onClick = { authViewModel.logout() },
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                modifier = Modifier.padding(vertical = 16.dp)
+            ) {
+                Icon(Icons.Default.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                Text("Wyloguj się")
             }
         }
     }
 }
 
 @Composable
-fun SectionContainer(
-    title: String,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
-        Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 8.dp, start = 8.dp)
-        )
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.3f), RoundedCornerShape(16.dp))
-        ) {
-            Column(modifier = Modifier.padding(16.dp), content = content)
+private fun ProfileHeroSection(photoUrl: Uri?, email: String?, onImageSelected: (Uri) -> Unit) {
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? -> uri?.let(onImageSelected) }
+    )
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(contentAlignment = Alignment.BottomEnd) {
+            AsyncImage(
+                model = photoUrl ?: R.drawable.logo, // Upewnij się, że masz R.drawable.logo lub zmień na ikonę zastępczą
+                contentDescription = "Zdjęcie profilowe",
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .border(2.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), CircleShape),
+                contentScale = ContentScale.Crop
+            )
+            IconButton(
+                onClick = { imagePicker.launch("image/*") },
+                modifier = Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.primary)
+            ) {
+                Icon(Icons.Default.Edit, contentDescription = "Zmień zdjęcie", tint = Color.White)
+            }
         }
+        Text(email ?: "", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
-fun ReadOnlyField(
-    label: String,
-    value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
-) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(text = value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+private fun SecuritySection(onChangePasswordClick: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Zabezpieczenia", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(16.dp))
+            // Tutaj była literówka "vertica\lAlignment", naprawiona poniżej:
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.width(16.dp))
+                Text("Hasło", modifier = Modifier.weight(1f))
+                TextButton(onClick = onChangePasswordClick) {
+                    Text("ZMIEŃ")
+                }
+            }
         }
     }
 }
@@ -254,12 +206,12 @@ fun ReadOnlyField(
 @Composable
 private fun ChangePasswordDialog(
     onDismiss: () -> Unit,
+    uiState: AuthUiState,
     onConfirm: (String) -> Unit
 ) {
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var newPasswordVisible by remember { mutableStateOf(false) }
-    var confirmPasswordVisible by remember { mutableStateOf(false) }
+    var passwordVisible by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     AlertDialog(
@@ -272,51 +224,45 @@ private fun ChangePasswordDialog(
                     onValueChange = { newPassword = it },
                     label = { Text("Nowe hasło") },
                     modifier = Modifier.fillMaxWidth(),
-                    visualTransformation = if (newPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
-                        IconButton(onClick = { newPasswordVisible = !newPasswordVisible }) {
-                            Icon(
-                                imageVector = if (newPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                                contentDescription = if (newPasswordVisible) "Ukryj hasło" else "Pokaż hasło"
-                            )
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, "Toggle password visibility")
                         }
                     }
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
                     label = { Text("Potwierdź hasło") },
                     modifier = Modifier.fillMaxWidth(),
-                    visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
-                            Icon(
-                                imageVector = if (confirmPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                                contentDescription = if (confirmPasswordVisible) "Ukryj hasło" else "Pokaż hasło"
-                            )
-                        }
-                    }
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 )
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
-                    if (newPassword.isNotBlank() && newPassword == confirmPassword) {
-                        onConfirm(newPassword)
-                    } else {
-                        Toast.makeText(context, "Hasła nie są identyczne lub są puste.", Toast.LENGTH_SHORT).show()
+                    if (newPassword.length < 6) {
+                        Toast.makeText(context, "Hasło musi mieć co najmniej 6 znaków.", Toast.LENGTH_SHORT).show()
+                        return@Button
                     }
-                }
+                    if (newPassword != confirmPassword) {
+                        Toast.makeText(context, "Hasła nie są takie same.", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    onConfirm(newPassword)
+                },
+                enabled = !uiState.isLoading
             ) {
-                Text("Zapisz")
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                } else {
+                    Text("Zapisz")
+                }
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Anuluj")
-            }
-        }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } }
     )
 }

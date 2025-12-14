@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.util.UUID
 
 data class AddInvoiceUiState(
@@ -18,6 +19,7 @@ data class AddInvoiceUiState(
     val buyerNip: String = "",
     val buyerAddress: String = "",
     val issueDate: Long = System.currentTimeMillis(),
+    val paymentDueDate: Long = System.currentTimeMillis() + 14 * 24 * 60 * 60 * 1000, // Default to 14 days later
     val amount: String = "",
     val isPaid: Boolean = false,
     val nipToSearch: String = ""
@@ -36,6 +38,22 @@ class InvoiceViewModel(
     private val _isLoadingGus = MutableStateFlow(false)
     val isLoadingGus: StateFlow<Boolean> = _isLoadingGus.asStateFlow()
 
+    private val _nextInvoiceNumber = MutableStateFlow("")
+    val nextInvoiceNumber: StateFlow<String> = _nextInvoiceNumber.asStateFlow()
+
+    init {
+        generateNextInvoiceNumber()
+    }
+
+    private fun generateNextInvoiceNumber() {
+        // In a real app, you'd fetch the last invoice number from the repository
+        val year = LocalDate.now().year
+        val month = LocalDate.now().monthValue
+        // This is a placeholder. A real implementation needs a proper sequence.
+        val nextId = (Math.random() * 100).toInt() + 1 
+        _nextInvoiceNumber.value = "FV/$year/$month/${String.format("%02d", nextId)}"
+    }
+
     fun onNipToSearchChange(nip: String) {
         _uiState.update { it.copy(nipToSearch = nip) }
     }
@@ -44,16 +62,12 @@ class InvoiceViewModel(
         _uiState.update { it.copy(buyerName = name) }
     }
 
-    fun onBuyerNipChange(nip: String) {
-        _uiState.update { it.copy(buyerNip = nip) }
-    }
-
-    fun onBuyerAddressChange(address: String) {
-        _uiState.update { it.copy(buyerAddress = address) }
-    }
-
-    fun onDateChange(dateMillis: Long) {
+    fun onIssueDateChange(dateMillis: Long) {
         _uiState.update { it.copy(issueDate = dateMillis) }
+    }
+
+    fun onPaymentDueDateChange(dateMillis: Long) {
+        _uiState.update { it.copy(paymentDueDate = dateMillis) }
     }
 
     fun onAmountChange(amount: String) {
@@ -65,9 +79,9 @@ class InvoiceViewModel(
             _isLoadingGus.value = true
             delay(1500) // Simulate network call
             val result = GusData(
-                name = "Mock Firma Sp. z o.o.",
+                name = "Mock Klient Sp. z o.o.",
                 nip = nip,
-                address = "ul. Testowa 1, 00-001 Warszawa"
+                address = "ul. Klientów 123, 00-002 Warszawa"
             )
             _gusSearchResult.value = result
             _uiState.update {
@@ -81,20 +95,23 @@ class InvoiceViewModel(
         }
     }
 
-    fun addInvoice(onInvoiceAdded: () -> Unit) {
+    fun issueInvoice(onInvoiceIssued: () -> Unit) {
         viewModelScope.launch {
             val currentState = _uiState.value
             val invoice = Invoice(
                 id = UUID.randomUUID().toString(),
-                invoiceNumber = "FV/2024/001", // Placeholder
+                invoiceNumber = _nextInvoiceNumber.value, 
                 buyerName = currentState.buyerName,
                 buyerNip = currentState.buyerNip,
                 amount = currentState.amount.toDoubleOrNull() ?: 0.0,
                 date = currentState.issueDate,
-                isPaid = currentState.isPaid
+                // In a real app, you might want to store the due date as well
+                isPaid = false 
             )
             invoiceRepository.addInvoice(invoice)
-            onInvoiceAdded()
+            // Regenerate number for the next invoice
+            generateNextInvoiceNumber()
+            onInvoiceIssued()
         }
     }
 }

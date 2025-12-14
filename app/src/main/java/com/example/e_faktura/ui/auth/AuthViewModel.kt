@@ -10,43 +10,46 @@ import com.google.firebase.auth.ktx.userProfileChangeRequest
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+
+data class AuthUiState(
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val isLoginSuccess: Boolean = false,
+    val passwordChangeSuccess: Boolean = false,
+    val profileUpdateSuccess: Boolean = false
+)
 
 class AuthViewModel : ViewModel() {
 
     private val auth: FirebaseAuth = Firebase.auth
     private val storage = Firebase.storage
 
-    /**
-     * A reactive flow providing the current Firebase user.
-     * The UI should observe this to react to login/logout changes.
-     */
+    private val _uiState = MutableStateFlow(AuthUiState())
+    val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
+
     val user: StateFlow<FirebaseUser?> = callbackFlow {
         val listener = FirebaseAuth.AuthStateListener { auth -> trySend(auth.currentUser) }
         auth.addAuthStateListener(listener)
         awaitClose { auth.removeAuthStateListener(listener) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), auth.currentUser)
 
-    /**
-     * DEPRECATED: Synchronously gets the current user. Prefer observing the `user` flow.
-     * Provided for compatibility with existing UI code.
-     */
-    fun getCurrentUser(): FirebaseUser? {
-        return auth.currentUser
-    }
-
-    fun login(email: String, pass: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    fun login(email: String, pass: String) {
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 auth.signInWithEmailAndPassword(email, pass).await()
-                onSuccess()
+                _uiState.update { it.copy(isLoading = false, isLoginSuccess = true) }
             } catch (e: Exception) {
-                onError(e.message ?: "Błąd logowania")
+                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Błąd logowania") }
             }
         }
     }
@@ -61,47 +64,46 @@ class AuthViewModel : ViewModel() {
             }
         }
     }
-
-    fun updateProfilePicture(uri: Uri, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    
+    fun changePassword(newPass: String) {
         viewModelScope.launch {
-            val currentUser = auth.currentUser
-            if (currentUser == null) {
-                onError("Użytkownik nie jest zalogowany.")
-                return@launch
+            val currentUser = auth.currentUser ?: return@launch
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            try {
+                currentUser.updatePassword(newPass).await()
+                _uiState.update { it.copy(isLoading = false, passwordChangeSuccess = true) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Błąd podczas zmiany hasła.") }
             }
+        }
+    }
+
+    fun updateProfilePicture(uri: Uri?) {
+        viewModelScope.launch {
+            val currentUser = auth.currentUser ?: return@launch
+            if (uri == null) return@launch
+
+            _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val storageRef = storage.reference.child("profile_pictures/${currentUser.uid}")
                 val downloadUrl = storageRef.putFile(uri).await().storage.downloadUrl.await()
                 val profileUpdates = userProfileChangeRequest { photoUri = downloadUrl }
                 currentUser.updateProfile(profileUpdates).await()
-                onSuccess()
+                _uiState.update { it.copy(isLoading = false, profileUpdateSuccess = true) }
             } catch (e: Exception) {
-                onError(e.message ?: "Błąd podczas przesyłania zdjęcia.")
-            }
-        }
-    }
-
-    fun changePassword(newPass: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        viewModelScope.launch {
-            val currentUser = auth.currentUser
-            if (currentUser == null) {
-                onError("Użytkownik nie jest zalogowany.")
-                return@launch
-            }
-            try {
-                currentUser.updatePassword(newPass).await()
-                onSuccess()
-            } catch (e: Exception) {
-                onError(e.message ?: "Wystąpił błąd podczas zmiany hasła.")
+                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Błąd podczas przesyłania zdjęcia.") }
             }
         }
     }
 
     fun logout() {
         auth.signOut()
-        // For guest mode, immediately create a new anonymous session
         viewModelScope.launch {
             auth.signInAnonymously()
         }
+    }
+
+    fun resetAuthState() {
+        _uiState.value = AuthUiState()
     }
 }
