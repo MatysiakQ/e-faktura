@@ -1,11 +1,10 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
-    // ✅ KLUCZOWA ZMIANA: Dodanie pluginu Compose Compiler dla Kotlin 2.0
-    alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.google.gms.google.services)
+    alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -20,6 +19,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -34,20 +34,25 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
+
     kotlinOptions {
         jvmTarget = "1.8"
     }
+
     buildFeatures {
         compose = true
         buildConfig = true
     }
-    // ✅ USUNIĘTO: composeOptions { kotlinCompilerExtensionVersion = ... }
-    // W Kotlin 2.0 ta sekcja jest zbędna i powoduje błędy,
-    // bo wersją kompilatora zarządza teraz plugin dodany na górze pliku.
+
+    // Konfiguracja dla Kotlin < 2.0 (standardowa)
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.14"
+    }
 
     packaging {
         resources {
@@ -57,10 +62,12 @@ android {
 }
 
 dependencies {
-    // Core
+
+    // Core & Lifecycle
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.4")
+    implementation(libs.androidx.lifecycle.runtime.compose)
+
     // Compose
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
@@ -72,10 +79,20 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
 
+    // GLANCE (Widgety)
+    // Dodane ręcznie, żeby zadziałało nawet jak nie masz ich w libs.versions.toml
+    implementation("androidx.glance:glance-appwidget:1.1.0")
+    implementation("androidx.glance:glance-material3:1.1.0")
+
     // Room
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+
+    // Hilt
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
+    implementation(libs.androidx.hilt.navigation.compose)
 
     // Firebase
     implementation(platform(libs.firebase.bom))
@@ -89,10 +106,12 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.zxing.core)
     implementation(libs.zxing.android.embedded)
-    implementation(libs.accompanist.permissions)
-    implementation(libs.kotlinx.serialization.json)
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
+    implementation(libs.kotlinx.serialization.json)
+
+    // XML parser (GUS)
+    implementation("com.squareup.retrofit2:converter-simplexml:2.9.0")
 
     // Testing
     testImplementation(libs.junit)
