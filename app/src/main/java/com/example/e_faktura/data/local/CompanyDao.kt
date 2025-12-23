@@ -1,4 +1,4 @@
-package com.example.e_faktura.data.local
+package com.example.e_faktura.data.dao // ZMIANA PAKIETU Z .local NA .dao
 
 import androidx.room.Dao
 import androidx.room.Insert
@@ -16,9 +16,14 @@ interface CompanyDao {
     @Query("SELECT * FROM companies WHERE id = :id LIMIT 1")
     suspend fun getCompanyById(id: String): Company?
 
+    // ZMIANA: insertCompany zamiast insert (dla spójności z InvoiceDao)
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(company: Company)
+    suspend fun insertCompany(company: Company)
 
     @Query("DELETE FROM companies")
     suspend fun clearAll()
+
+    // Opcjonalnie usuwanie pojedynczej firmy
+    @Query("DELETE FROM companies WHERE id = :id")
+    suspend fun deleteCompany(id: String)
 }

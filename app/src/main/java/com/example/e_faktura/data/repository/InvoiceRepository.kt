@@ -1,6 +1,6 @@
 package com.example.e_faktura.data.repository
 
-import com.example.e_faktura.data.local.InvoiceDao
+import com.example.e_faktura.data.dao.InvoiceDao // Sprawdź czy pakiet to .dao czy .local u Ciebie
 import com.example.e_faktura.model.Invoice
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -8,9 +8,13 @@ import com.google.firebase.firestore.ktx.toObjects
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class InvoiceRepository(
+@Singleton
+class InvoiceRepository @Inject constructor(
     private val invoiceDao: InvoiceDao,
     private val firestore: FirebaseFirestore,
     private val firebaseAuth: FirebaseAuth
@@ -21,10 +25,10 @@ class InvoiceRepository(
     fun getInvoices(): Flow<List<Invoice>> {
         val currentUserId = userId
         if (currentUserId == null) {
-            // Guest mode: Use local database
+            // Tryb gościa (Offline - Room)
             return invoiceDao.getAllInvoices()
         } else {
-            // Logged-in user: Use Firestore
+            // Zalogowany (Online - Firestore)
             return callbackFlow {
                 val listener = firestore.collection("users").document(currentUserId)
                     .collection("invoices")
@@ -34,7 +38,7 @@ class InvoiceRepository(
                             return@addSnapshotListener
                         }
                         if (snapshot != null) {
-                            trySend(snapshot.toObjects<Invoice>()) 
+                            trySend(snapshot.toObjects<Invoice>())
                         }
                     }
                 awaitClose { listener.remove() }
@@ -42,10 +46,23 @@ class InvoiceRepository(
         }
     }
 
-    suspend fun addInvoice(invoice: Invoice) {
+    // Dodana funkcja, której może brakować w innych miejscach
+    suspend fun getInvoiceById(id: String): Invoice? {
         val currentUserId = userId
         if (currentUserId == null) {
-            invoiceDao.insert(invoice)
+            return invoiceDao.getInvoice(id)
+        } else {
+            val snapshot = firestore.collection("users").document(currentUserId)
+                .collection("invoices").document(id).get().await()
+            return snapshot.toObject(Invoice::class.java)
+        }
+    }
+
+    // ZMIANA NAZWY: addInvoice -> insertInvoice (zgodnie z ViewModel)
+    suspend fun insertInvoice(invoice: Invoice) {
+        val currentUserId = userId
+        if (currentUserId == null) {
+            invoiceDao.insertInvoice(invoice)
         } else {
             firestore.collection("users").document(currentUserId)
                 .collection("invoices").document(invoice.id).set(invoice).await()
@@ -55,7 +72,9 @@ class InvoiceRepository(
     suspend fun updateInvoice(invoice: Invoice) {
         val currentUserId = userId
         if (currentUserId == null) {
-            invoiceDao.update(invoice)
+            // Room zazwyczaj używa tego samego insert z onConflict=REPLACE,
+            // ale jeśli masz update w DAO, to ok.
+            invoiceDao.insertInvoice(invoice)
         } else {
             firestore.collection("users").document(currentUserId)
                 .collection("invoices").document(invoice.id).set(invoice).await()
@@ -65,7 +84,7 @@ class InvoiceRepository(
     suspend fun deleteInvoice(invoice: Invoice) {
         val currentUserId = userId
         if (currentUserId == null) {
-            invoiceDao.delete(invoice)
+            invoiceDao.deleteInvoice(invoice.id) // DAO zazwyczaj usuwa po ID
         } else {
             firestore.collection("users").document(currentUserId)
                 .collection("invoices").document(invoice.id).delete().await()

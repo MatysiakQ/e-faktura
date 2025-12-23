@@ -35,23 +35,30 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel // <--- NOWY IMPORT
 import androidx.navigation.NavController
-import com.example.e_faktura.ui.AppViewModelProvider
+// USUNIĘTO: import com.example.e_faktura.ui.AppViewModelProvider
+import com.example.e_faktura.ui.company.add.CompanyFormViewModel
 import com.example.e_faktura.utils.QrCodeGenerator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompanyDetailsScreen(
     navController: NavController,
-    detailsViewModel: CompanyDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    companyId: String,
+    // POPRAWKA: Używamy Hilt do wstrzykiwania ViewModelu
+    viewModel: CompanyFormViewModel = hiltViewModel()
 ) {
-    val uiState by detailsViewModel.uiState.collectAsState()
+    LaunchedEffect(companyId) {
+        viewModel.loadCompany(companyId)
+    }
+
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(uiState.company?.businessName ?: "Ładowanie...") },
+                title = { Text(if (uiState.businessName.isNotBlank()) uiState.businessName else "Ładowanie...") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Wróć")
@@ -81,12 +88,11 @@ fun CompanyDetailsScreen(
                     Text("Błąd: ${uiState.error}", color = MaterialTheme.colorScheme.error)
                 }
             }
-            uiState.company != null -> {
-                val company = uiState.company!!
+            uiState.nip.isNotBlank() -> {
                 var qrBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
 
-                LaunchedEffect(company.nip) {
-                    qrBitmap = QrCodeGenerator.generateQrBitmap(company.nip)
+                LaunchedEffect(uiState.nip) {
+                    qrBitmap = QrCodeGenerator.generateQrBitmap(uiState.nip)
                 }
 
                 Column(
@@ -97,13 +103,13 @@ fun CompanyDetailsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = company.businessName,
+                        text = uiState.businessName,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = "NIP: ${company.nip}", style = MaterialTheme.typography.bodyLarge)
-                    Text(text = company.address, style = MaterialTheme.typography.bodyLarge)
+                    Text(text = "NIP: ${uiState.nip}", style = MaterialTheme.typography.bodyLarge)
+                    Text(text = uiState.address, style = MaterialTheme.typography.bodyLarge)
 
                     Spacer(modifier = Modifier.height(32.dp))
 
@@ -113,7 +119,7 @@ fun CompanyDetailsScreen(
                     if (qrBitmap != null) {
                         Image(
                             bitmap = qrBitmap!!,
-                            contentDescription = "Kod QR dla NIP ${company.nip}",
+                            contentDescription = "Kod QR dla NIP ${uiState.nip}",
                             modifier = Modifier.size(200.dp)
                         )
                     } else {

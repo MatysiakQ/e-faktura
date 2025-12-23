@@ -29,14 +29,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatisticsScreen(
     navController: NavController,
-    statisticsViewModel: StatisticsViewModel = viewModel(factory = com.example.e_faktura.ui.AppViewModelProvider.Factory),
+    statisticsViewModel: StatisticsViewModel = hiltViewModel(),
     onOverdueClick: () -> Unit
 ) {
     val uiState by statisticsViewModel.uiState.collectAsState()

@@ -3,6 +3,7 @@ package com.example.e_faktura.ui.invoice.list
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -29,48 +30,53 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.e_faktura.model.Invoice
-import com.example.e_faktura.ui.AppViewModelProvider
 import com.example.e_faktura.ui.navigation.Screen
 
 @Composable
 fun InvoiceDashboardScreen(
     navController: NavController,
-    invoiceViewModel: InvoiceListViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    invoiceViewModel: InvoiceListViewModel = hiltViewModel()
 ) {
     val uiState by invoiceViewModel.uiState.collectAsState()
     val invoices = uiState.invoices
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        item {
-            RevenueCard(
-                invoices = invoices,
-                onDetailsClick = { navController.navigate(Screen.Statistics.route) }
-            )
+    if (uiState.isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
         }
-
-        item {
-            Text(
-                text = "Ostatnie faktury",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-        }
-
-        if (invoices.isEmpty()) {
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             item {
-                EmptyState()
+                RevenueCard(
+                    invoices = invoices,
+                    onDetailsClick = { navController.navigate(Screen.Statistics.route) }
+                )
             }
-        } else {
-            items(invoices, key = { it.id }) { invoice ->
-                InvoiceItem(invoice = invoice)
+
+            item {
+                Text(
+                    text = "Ostatnie faktury",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+
+            if (invoices.isEmpty()) {
+                item {
+                    EmptyState()
+                }
+            } else {
+                items(invoices, key = { it.id }) { invoice ->
+                    InvoiceItem(invoice = invoice)
+                }
             }
         }
     }
@@ -79,7 +85,7 @@ fun InvoiceDashboardScreen(
 @Composable
 fun RevenueCard(invoices: List<Invoice>, onDetailsClick: () -> Unit) {
     var balanceVisible by rememberSaveable { mutableStateOf(false) } // Default to hidden
-    val totalRevenue = invoices.sumOf { it.amount }
+    val totalRevenue = invoices.filter { it.type.value == "SPRZEDAŻ" }.sumOf { it.grossValue }
     val balanceText = if (balanceVisible) String.format("%,.2f", totalRevenue) else "•••••"
 
     Card(
@@ -179,18 +185,18 @@ private fun InvoiceItem(invoice: Invoice) {
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Faktura dla: ${invoice.buyerName}",
+                text = "Faktura dla: ${invoice.client.businessName}",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Kwota: ${String.format("%,.2f", invoice.amount)} PLN",
+                text = "Kwota: ${String.format("%,.2f", invoice.grossValue)} PLN",
                 style = MaterialTheme.typography.bodyLarge
             )
             Text(
-                text = if (invoice.isPaid) "Status: Zapłacono" else "Status: Oczekuje na płatność",
-                color = if (invoice.isPaid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                text = if (invoice.paid) "Status: Zapłacono" else "Status: Oczekuje na płatność",
+                color = if (invoice.paid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold
             )

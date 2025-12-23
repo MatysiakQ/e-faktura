@@ -25,15 +25,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel // <--- NOWY IMPORT
 import androidx.navigation.NavController
-import com.example.e_faktura.ui.AppViewModelProvider
-import com.example.e_faktura.ui.navigation.Screen
+// USUNIĘTO: import com.example.e_faktura.ui.AppViewModelProvider
 
 @Composable
 fun MyAccountScreen(
     navController: NavController,
-    authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    // ZMIANA: Używamy hiltViewModel() zamiast fabryki
+    authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val user by authViewModel.user.collectAsState()
 
@@ -73,7 +73,8 @@ fun MyAccountScreen(
         Button(
             onClick = {
                 authViewModel.logout()
-                navController.navigate(Screen.Login.route) {
+                // Używamy trasy "login" zgodnie z MainActivity
+                navController.navigate("login") {
                     // Wyczyść cały backstack, aby użytkownik nie mógł wrócić do ekranu konta
                     popUpTo(navController.graph.id) {
                         inclusive = true

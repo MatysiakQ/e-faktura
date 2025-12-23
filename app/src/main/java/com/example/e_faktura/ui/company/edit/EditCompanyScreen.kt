@@ -26,31 +26,37 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel // <--- NOWY IMPORT
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+// USUNIĘTO: import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.e_faktura.model.CompanyIcon
-import com.example.e_faktura.model.IconType
-import com.example.e_faktura.ui.AppViewModelProvider
-import com.example.e_faktura.ui.company.add.CompanyFormEvent
+// USUNIĘTO: import com.example.e_faktura.ui.AppViewModelProvider
 import com.example.e_faktura.ui.company.add.CompanyFormViewModel
 import com.example.e_faktura.ui.company.add.UiEvent
 import com.example.e_faktura.ui.components.IconPickerDialog
 import com.example.e_faktura.ui.components.IconProvider
-import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditCompanyScreen(
     navController: NavController,
-    viewModel: CompanyFormViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    companyId: String,
+    // ZMIANA: Używamy hiltViewModel() zamiast fabryki
+    viewModel: CompanyFormViewModel = hiltViewModel()
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showIconPicker by remember { mutableStateOf(false) }
 
-    LaunchedEffect(key1 = true) {
-        viewModel.uiEvent.collectLatest { event ->
+    // 1. Ładowanie danych firmy na starcie
+    LaunchedEffect(companyId) {
+        viewModel.loadCompany(companyId)
+    }
+
+    // 2. Obsługa zdarzeń (Zapis / Błąd)
+    LaunchedEffect(true) {
+        viewModel.uiEvent.collect { event ->
             when (event) {
                 UiEvent.SaveSuccess -> {
                     Toast.makeText(context, "Zmiany zapisane", Toast.LENGTH_SHORT).show()
@@ -67,8 +73,8 @@ fun EditCompanyScreen(
         IconPickerDialog(
             onDismiss = { showIconPicker = false },
             onIconSelected = { selectedIcon ->
-                val iconString = "${selectedIcon.type}:${selectedIcon.value}"
-                viewModel.onEvent(CompanyFormEvent.IconChanged(iconString))
+                // Formatujemy ikonę jako String "TYPE:VALUE" zgodnie z ViewModelem
+                viewModel.updateIcon("${selectedIcon.type}:${selectedIcon.value}")
                 showIconPicker = false
             }
         )
@@ -86,52 +92,58 @@ fun EditCompanyScreen(
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp)
-        ) {
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+
             if (state.isLoading) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
+
             Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(Modifier.height(16.dp))
+
+                // Awatar
                 CompanyAvatar(iconString = state.icon, onClick = { showIconPicker = true })
+
                 Spacer(Modifier.height(24.dp))
 
+                // NIP + Przycisk GUS
                 OutlinedTextField(
                     value = state.nip,
-                    onValueChange = { viewModel.onEvent(CompanyFormEvent.NipChanged(it)) },
+                    onValueChange = { viewModel.updateNip(it) },
                     label = { Text("NIP") },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                     trailingIcon = {
-                        IconButton(onClick = { viewModel.loadDataFromNip(state.nip) }) {
-                            Icon(Icons.Default.Search, contentDescription = "Szukaj w GUS")
+                        IconButton(onClick = {
+                            if (state.nip.isNotBlank()) viewModel.searchByNip()
+                        }) {
+                            Icon(Icons.Filled.Search, contentDescription = "Szukaj w GUS")
                         }
-                    },
-                    isError = state.error?.contains("NIP") == true
+                    }
                 )
                 Spacer(Modifier.height(16.dp))
 
+                // Nazwa Firmy
                 OutlinedTextField(
                     value = state.businessName,
-                    onValueChange = { viewModel.onEvent(CompanyFormEvent.BusinessNameChanged(it)) },
+                    onValueChange = { viewModel.updateName(it) },
                     label = { Text("Nazwa Firmy") },
                     modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
-                    isError = state.error?.contains("Nazwa") == true
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next)
                 )
                 Spacer(Modifier.height(16.dp))
 
+                // Adres (Ulica)
                 OutlinedTextField(
                     value = state.address,
-                    onValueChange = { viewModel.onEvent(CompanyFormEvent.AddressChanged(it)) },
-                    label = { Text("Adres (Ulica, Kod, Miasto)") },
+                    onValueChange = { viewModel.updateAddress(it) },
+                    label = { Text("Adres (Ulica i numer)") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2,
                     maxLines = 4,
@@ -139,29 +151,52 @@ fun EditCompanyScreen(
                 )
                 Spacer(Modifier.height(16.dp))
 
+                // Kod Pocztowy i Miasto
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = state.postalCode,
+                        onValueChange = { viewModel.updatePostalCode(it) },
+                        label = { Text("Kod") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next)
+                    )
+                    OutlinedTextField(
+                        value = state.city,
+                        onValueChange = { viewModel.updateCity(it) },
+                        label = { Text("Miasto") },
+                        modifier = Modifier.weight(2f),
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next)
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+
+                // Właściciel
                 OutlinedTextField(
                     value = state.ownerFullName,
-                    onValueChange = { viewModel.onEvent(CompanyFormEvent.OwnerFullNameChanged(it)) },
+                    onValueChange = { viewModel.updateOwner(it) },
                     label = { Text("Imię i nazwisko właściciela") },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next)
                 )
                 Spacer(Modifier.height(16.dp))
 
+                // Konto bankowe
                 OutlinedTextField(
                     value = state.bankAccount,
-                    onValueChange = { viewModel.onEvent(CompanyFormEvent.BankAccountChanged(it)) },
+                    onValueChange = { viewModel.updateBankAccount(it) },
                     label = { Text("Numer konta bankowego") },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
                 )
                 Spacer(Modifier.height(32.dp))
 
+                // Przycisk Zapisz
                 Button(
                     onClick = { viewModel.saveCompany() },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp)
+                        .height(48.dp),
+                    enabled = !state.isLoading
                 ) {
                     Text("Zapisz zmiany")
                 }
@@ -171,6 +206,7 @@ fun EditCompanyScreen(
     }
 }
 
+// Lokalna wersja komponentu Avatar
 @Composable
 private fun CompanyAvatar(iconString: String, onClick: () -> Unit) {
     Box(
@@ -182,19 +218,21 @@ private fun CompanyAvatar(iconString: String, onClick: () -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         val parts = iconString.split(":", limit = 2)
-        val type = if (parts.getOrNull(0) == "CUSTOM") IconType.CUSTOM else IconType.PREDEFINED
-        val value = parts.getOrNull(1) ?: "Business"
-        val companyIcon = CompanyIcon(type, value)
+        val type = parts.getOrNull(0)
+        val value = parts.getOrNull(1)
 
-        if (companyIcon.type == IconType.CUSTOM) {
+        if (type == "CUSTOM" && value != null) {
             AsyncImage(
-                model = Uri.parse(companyIcon.value),
+                model = Uri.parse(value),
                 contentDescription = "Logo firmy",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
         } else {
-            val iconVector = IconProvider.getIcon(companyIcon.value)
+            val iconVector = if (value != null) {
+                try { IconProvider.getIcon(value) } catch (e: Exception) { Icons.Outlined.Storefront }
+            } else Icons.Outlined.Storefront
+
             Icon(
                 imageVector = iconVector,
                 contentDescription = "Logo firmy",

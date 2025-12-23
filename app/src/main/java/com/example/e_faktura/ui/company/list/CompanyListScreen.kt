@@ -34,17 +34,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.e_faktura.model.Company
-import com.example.e_faktura.ui.AppViewModelProvider
 import com.example.e_faktura.ui.components.IconProvider
 
 @Composable
 fun CompanyListScreen(
     navController: NavController,
-    viewModel: CompanyListViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    viewModel: CompanyListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -60,7 +59,7 @@ fun CompanyListScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
-            items(uiState.companies, key = { it.id }) { company ->
+            items(uiState.companyList, key = { it.id }) { company ->
                 CompanyListItem(company = company) {
                     navController.navigate("company_details/${company.id}")
                 }

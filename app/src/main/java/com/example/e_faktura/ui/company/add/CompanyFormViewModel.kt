@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.e_faktura.data.repository.CompanyRepository
 import com.example.e_faktura.data.repository.GusRepository
 import com.example.e_faktura.model.Company
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
+import javax.inject.Inject
 
 data class CompanyFormState(
     val id: String? = null,
@@ -33,7 +35,8 @@ sealed class UiEvent {
     data class ShowError(val message: String) : UiEvent()
 }
 
-class CompanyFormViewModel(
+@HiltViewModel
+class CompanyFormViewModel @Inject constructor(
     private val companyRepository: CompanyRepository,
     private val gusRepository: GusRepository
 ) : ViewModel() {
@@ -84,18 +87,27 @@ class CompanyFormViewModel(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            val result = gusRepository.searchByNip(nip)
-            _uiState.update {
-                if (result != null) {
-                    it.copy(
-                        isLoading = false,
-                        businessName = result.name,
-                        address = result.address, // Note: GUS API might not split address details
-                        nip = result.nip
-                    )
-                } else {
-                    it.copy(isLoading = false, error = "Nie znaleziono firmy w GUS dla podanego NIP.")
+            try {
+                // GusRepository prawdopodobnie zwraca prosty obiekt z polem 'name' i 'address'
+                val result = gusRepository.searchByNip(nip)
+
+                _uiState.update {
+                    if (result != null) {
+                        it.copy(
+                            isLoading = false,
+                            businessName = result.name ?: "",
+                            address = result.address ?: "",
+                            // POPRAWKA: Usunąłem city i postalCode, bo API GUS w Twoim repozytorium ich nie zwraca.
+                            // Użytkownik wpisze je ręcznie lub są częścią pola address.
+                            city = "",
+                            postalCode = ""
+                        )
+                    } else {
+                        it.copy(isLoading = false, error = "Nie znaleziono firmy w GUS dla podanego NIP.")
+                    }
                 }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = "Błąd połączenia z GUS: ${e.message}") }
             }
         }
     }
@@ -122,7 +134,9 @@ class CompanyFormViewModel(
                 icon = state.icon
             )
 
+            // Upsert (Insert or Replace)
             companyRepository.insertCompany(company)
+
             _uiState.update { it.copy(isLoading = false) }
             _uiEvent.send(UiEvent.SaveSuccess)
         }
