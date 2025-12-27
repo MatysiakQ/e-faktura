@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.e_faktura.R // Upewnij się, że masz ten import (lub usuń R.drawable.logo jeśli nie masz pliku)
 import com.example.e_faktura.ui.auth.AuthUiState
 import com.example.e_faktura.ui.auth.AuthViewModel
 
@@ -109,9 +108,7 @@ fun MyAccountScreen(
             Button(
                 onClick = {
                     authViewModel.logout()
-                    // POPRAWKA: Nawigacja do ekranu logowania i czyszczenie stosu
                     navController.navigate("login") {
-                        // Czyścimy wszystko aż do początku grafu nawigacji
                         popUpTo(navController.graph.id) { inclusive = true }
                     }
                 },
@@ -135,7 +132,6 @@ private fun ProfileHeroSection(photoUrl: Uri?, email: String?, onImageSelected: 
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(contentAlignment = Alignment.BottomEnd) {
-            // POPRAWKA: Bezpieczniejsze ładowanie obrazka (fallback vector)
             AsyncImage(
                 model = photoUrl,
                 contentDescription = "Zdjęcie profilowe",

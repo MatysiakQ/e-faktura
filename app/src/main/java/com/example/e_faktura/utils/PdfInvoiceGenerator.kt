@@ -2,6 +2,7 @@ package com.example.e_faktura.utils
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import android.text.StaticLayout
@@ -12,6 +13,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * UNIFIED utility for generating and sharing PDF invoices.
@@ -34,38 +38,61 @@ object PdfInvoiceGenerator {
         val page = document.startPage(pageInfo)
         val canvas = page.canvas
 
+        // Konfiguracja pędzla do tytułu
         val titlePaint = TextPaint().apply {
             isAntiAlias = true
             textSize = 20f
             isFakeBoldText = true
-            color = android.graphics.Color.BLACK
+            color = Color.BLACK
         }
 
+        // Konfiguracja pędzla do treści
         val textPaint = TextPaint().apply {
             isAntiAlias = true
             textSize = 12f
-            color = android.graphics.Color.DKGRAY
+            color = Color.DKGRAY
         }
 
         var yPosition = 50f
 
-        // --- Title ---
+        // --- Tytuł ---
         canvas.drawText("Faktura nr: ${invoice.invoiceNumber}", 40f, yPosition, titlePaint)
-        yPosition += 60f
+        yPosition += 40f
 
-        // --- Invoice Details using StaticLayout for robust text handling ---
+        // --- Formatowanie Daty ---
+        val dateFormat = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
+        val dateStr = dateFormat.format(Date(invoice.date))
+
+        // --- Treść Faktury (Zaktualizowana do nowego modelu) ---
+        // Używamy StaticLayout do ładnego łamania linii
         val invoiceDetails = """
-            Nabywca: ${invoice.buyerName}
-            NIP Nabywcy: ${invoice.buyerNip}
+            Typ: ${if (invoice.type == "SALE") "Sprzedaż" else "Zakup"}
+            Data wystawienia: $dateStr
+            Status: ${if (invoice.isPaid) "Opłacona" else "Do zapłaty"}
             
-            Data wystawienia: ${java.text.SimpleDateFormat("dd-MM-yyyy").format(java.util.Date(invoice.date))}
-            Status: ${if (invoice.isPaid) "Zapłacono" else "Nie zapłacono"}
+            ------------------------------------------------
+            NABYWCA:
+            ${invoice.buyerName}
+            NIP: ${invoice.buyerNip}
+            ------------------------------------------------
             
-            Kwota: ${String.format("%.2f", invoice.amount)} PLN
+            SZCZEGÓŁY PŁATNOŚCI:
+            
+            Kwota Netto:   ${String.format("%.2f", invoice.netValue)} PLN
+            Stawka VAT:    ${(invoice.vatRate * 100).toInt()}%
+            Kwota VAT:     ${String.format("%.2f", invoice.vatValue)} PLN
+            
+            SUMA BRUTTO:   ${String.format("%.2f", invoice.grossValue)} PLN
         """.trimIndent()
 
-        val textLayout = StaticLayout.Builder.obtain(invoiceDetails, 0, invoiceDetails.length, textPaint, canvas.width - 80)
-            .build()
+        // Rysowanie tekstu wieloliniowego
+        val textLayout = StaticLayout.Builder.obtain(
+            invoiceDetails,
+            0,
+            invoiceDetails.length,
+            textPaint,
+            PAGE_WIDTH - 80
+        ).build()
 
         canvas.save()
         canvas.translate(40f, yPosition)
@@ -74,22 +101,30 @@ object PdfInvoiceGenerator {
 
         document.finishPage(page)
 
-        // --- Save and Share ---
+        // --- Zapis i Udostępnianie ---
         try {
-            val pdfFile = File(context.cacheDir, "invoice_${invoice.id}.pdf")
+            val fileName = "faktura_${invoice.invoiceNumber.replace("/", "_")}.pdf"
+            val pdfFile = File(context.cacheDir, fileName)
+
+            // Nadpisz jeśli istnieje
+            if (pdfFile.exists()) pdfFile.delete()
+
             document.writeTo(FileOutputStream(pdfFile))
 
+            // Pobranie URI przez FileProvider (wymaga konfiguracji w AndroidManifest.xml)
             val pdfUri: Uri = FileProvider.getUriForFile(
                 context,
-                "${context.packageName}.provider",
+                "${context.packageName}.provider", // Upewnij się, że to pasuje do authorities w Manifest
                 pdfFile
             )
-            
-            sharePdf(context, pdfUri)
+
+            // Przełączamy się na wątek główny, aby uruchomić Activity
+            withContext(Dispatchers.Main) {
+                sharePdf(context, pdfUri)
+            }
 
         } catch (e: Exception) {
             e.printStackTrace()
-            // Handle exception, e.g., show a toast
         } finally {
             document.close()
         }
@@ -100,8 +135,13 @@ object PdfInvoiceGenerator {
             action = Intent.ACTION_SEND
             putExtra(Intent.EXTRA_STREAM, uri)
             type = "application/pdf"
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(shareIntent, "Udostępnij fakturę PDF..."))
+
+        val chooser = Intent.createChooser(shareIntent, "Udostępnij fakturę PDF...")
+        // Dodajemy flagę na wypadek wywołania spoza Activity Context
+        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+        context.startActivity(chooser)
     }
 }

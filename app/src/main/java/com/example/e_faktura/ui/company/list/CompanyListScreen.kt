@@ -3,28 +3,14 @@ package com.example.e_faktura.ui.company.list
 import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Storefront
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -47,23 +33,41 @@ fun CompanyListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    if (uiState.isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-    } else {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(vertical = 8.dp)
-        ) {
-            items(uiState.companyList, key = { it.id }) { company ->
-                CompanyListItem(company = company) {
-                    navController.navigate("company_details/${company.id}")
+    Box(modifier = Modifier.fillMaxSize()) {
+        when {
+            uiState.isLoading -> {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            }
+            uiState.companyList.isEmpty() -> {
+                Text(
+                    text = "Brak firm. Dodaj nową.",
+                    modifier = Modifier.align(Alignment.Center),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+            else -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(uiState.companyList, key = { it.id }) { company ->
+                        CompanyListItem(company = company) {
+                            navController.navigate("company_details/${company.id}")
+                        }
+                    }
                 }
             }
+        }
+
+        FloatingActionButton(
+            onClick = { navController.navigate("add_company") },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+            containerColor = MaterialTheme.colorScheme.primary
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Dodaj firmę")
         }
     }
 }
@@ -118,7 +122,11 @@ private fun CompanyAvatar(iconString: String) {
                 contentScale = ContentScale.Crop
             )
         } else {
-            val iconVector = if (value != null) IconProvider.getIcon(value) else Icons.Outlined.Storefront
+            val iconVector = if (value != null) try {
+                IconProvider.getIcon(value)
+            } catch (e: Exception) {
+                Icons.Outlined.Storefront
+            } else Icons.Outlined.Storefront
             Icon(
                 imageVector = iconVector,
                 contentDescription = "Logo firmy",
