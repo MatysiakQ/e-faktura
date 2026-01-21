@@ -2,9 +2,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.google.gms.google.services)
-    alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotlin.compose) // ✅ Kompilator Compose dla Kotlina 2.0
 }
 
 android {
@@ -19,7 +19,6 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -49,10 +48,6 @@ android {
         buildConfig = true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
-    }
-
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -61,33 +56,30 @@ android {
 }
 
 dependencies {
+    // BOM - Zarządzanie wersjami Compose
+    implementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(platform(libs.androidx.compose.bom))
 
-    // ==============================================================================
-    // CRASH FIX: Enforce compatible versions for Compose, Activity, and Lifecycle
-    // ==============================================================================
-    val composeBom = platform("androidx.compose:compose-bom:2024.04.01")
-    implementation(composeBom)
-    androidTestImplementation(composeBom)
-
-    implementation("androidx.activity:activity-compose:1.9.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
-    // ==============================================================================
-
-    // Core
+    // Core & Activity
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.activity.compose)
 
-    // Compose UI (versions managed by BOM)
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended") // For extra icons
+    // Lifecycle
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.4")
+
+    // UI & Material3 - ✅ Zauważ kropki zamiast myślników
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.material.icons.extended) // ✅ Poprawione (kropka zamiast -)
 
     // Navigation
     implementation(libs.androidx.navigation.compose)
 
-    // GLANCE (Widgets)
+    // Glance (Widgety)
     implementation("androidx.glance:glance-appwidget:1.1.0")
     implementation("androidx.glance:glance-material3:1.1.0")
 
@@ -95,11 +87,6 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
-
-    // Hilt
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-    implementation(libs.androidx.hilt.navigation.compose)
 
     // Firebase
     implementation(platform(libs.firebase.bom))
@@ -122,7 +109,7 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    androidTestImplementation(libs.androidx.ui.test.junit4) // ✅ Poprawione
+    debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.androidx.ui.test.manifest) // ✅ Poprawione (tu był błąd 'manifest')
 }

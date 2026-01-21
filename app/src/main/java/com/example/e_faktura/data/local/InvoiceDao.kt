@@ -12,22 +12,24 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface InvoiceDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(invoice: Invoice)
+    suspend fun insertInvoice(invoice: Invoice)
 
-    @Update
-    suspend fun update(invoice: Invoice)
+    @Update(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun updateInvoice(invoice: Invoice)
 
     @Delete
-    suspend fun delete(invoice: Invoice)
+    suspend fun deleteInvoice(invoice: Invoice)
 
-    // ✅ POPRAWKA: Zmiana nazwy na getInvoiceById i zmiana na suspend
-    // To bezpośrednio naprawi błąd "Unresolved reference" w Repository
+    // ✅ ZMIANA: suspend zamiast Flow, aby pasowało do logiki getInvoiceById w Repository
     @Query("SELECT * FROM invoices WHERE id = :id")
     suspend fun getInvoiceById(id: String): Invoice?
 
-    @Query("SELECT * FROM invoices ORDER BY date DESC")
+    @Query("SELECT * FROM invoices ORDER BY dueDate DESC")
     fun getAllInvoices(): Flow<List<Invoice>>
 
+    @Query("SELECT * FROM invoices WHERE userId = :userId ORDER BY dueDate DESC")
+    fun getInvoicesByUser(userId: String): Flow<List<Invoice>>
+
     @Query("DELETE FROM invoices")
-    suspend fun clearAll()
+    suspend fun deleteAllInvoices()
 }

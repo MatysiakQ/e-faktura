@@ -31,45 +31,52 @@ import com.example.e_faktura.ui.navigation.Screen
 @Composable
 fun InvoiceDashboardScreen(
     navController: NavController,
+    // Korzystamy z fabryki, którą zdefiniowaliśmy wcześniej
     invoiceViewModel: InvoiceListViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by invoiceViewModel.uiState.collectAsState()
     val invoices = uiState.invoices
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(vertical = 16.dp)
-    ) {
-        item {
-            RevenueCard(
-                invoices = invoices,
-                onDetailsClick = { navController.navigate(Screen.Statistics.route) }
-            )
+    // ✅ DODANO: Obsługa stanu ładowania
+    if (uiState.isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
         }
-
-        item {
-            Text(
-                text = "Ostatnie faktury",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-            )
-        }
-
-        if (invoices.isEmpty()) {
-            item { EmptyState() }
-        } else {
-            items(invoices, key = { it.id }) { invoice ->
-                // ✅ Podpięta nawigacja do szczegółów
-                InvoiceItem(
-                    invoice = invoice,
-                    onClick = {
-                        navController.navigate("invoice_details/${invoice.id}")
-                    }
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(vertical = 16.dp)
+        ) {
+            item {
+                RevenueCard(
+                    invoices = invoices,
+                    onDetailsClick = { navController.navigate(Screen.Statistics.route) }
                 )
+            }
+
+            item {
+                Text(
+                    text = "Ostatnie faktury",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                )
+            }
+
+            if (invoices.isEmpty()) {
+                item { EmptyState() }
+            } else {
+                items(invoices, key = { it.id }) { invoice ->
+                    InvoiceItem(
+                        invoice = invoice,
+                        onClick = {
+                            navController.navigate("invoice_details/${invoice.id}")
+                        }
+                    )
+                }
             }
         }
     }
@@ -78,12 +85,14 @@ fun InvoiceDashboardScreen(
 @Composable
 fun RevenueCard(invoices: List<Invoice>, onDetailsClick: () -> Unit) {
     var balanceVisible by rememberSaveable { mutableStateOf(false) }
-    val totalRevenue = invoices.sumOf { it.amount }
+
+    // Obliczamy przychód tylko z faktur typu "PRZYCHÓD"
+    val totalRevenue = invoices.filter { it.type == "PRZYCHOD" || it.type == "" }.sumOf { it.amount }
     val balanceText = if (balanceVisible) String.format("%,.2f", totalRevenue) else "•••••"
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = RoundedCornerShape(24.dp)
     ) {
         Column(
@@ -186,7 +195,7 @@ private fun InvoiceItem(invoice: Invoice, onClick: () -> Unit) {
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (invoice.buyerName.isBlank()) "Nieznany Nabywca" else invoice.buyerName,
+                    text = invoice.buyerName.ifBlank { "Nieznany Nabywca" },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -204,7 +213,6 @@ private fun InvoiceItem(invoice: Invoice, onClick: () -> Unit) {
                 )
             }
 
-            // ✅ Zamieniono ChevronRight na ArrowForward, który jest w standardowej bibliotece
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,

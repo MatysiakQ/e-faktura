@@ -5,8 +5,7 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 
 interface GusService {
-    // Przykładowy endpoint. W prawdziwym GUS (BIR1) jest to dużo bardziej skomplikowane.
-    // Tutaj zakładamy, że masz jakieś proste API lub wrapper.
-    @GET("search")
-    suspend fun getCompanyData(@Query("nip") nip: String): GusData?
+    // Ścieżka zależy od Twojego konkretnego API GUS/REGON
+    @GET("api/query/nip")
+    suspend fun getCompanyData(@Query("nip") nip: String): GusData
 }

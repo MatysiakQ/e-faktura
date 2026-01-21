@@ -7,6 +7,28 @@ import com.example.e_faktura.data.repository.GusRepository
 import com.example.e_faktura.model.Company
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.util.UUID
+
+// ✅ Definicja stanu (musi być tutaj, jeśli skasowałeś osobny plik CompanyUiState.kt)
+data class CompanyUiState(
+    val id: String = UUID.randomUUID().toString(),
+    val nip: String = "",
+    val name: String = "",
+    val address: String = "",
+    val postalCode: String = "",
+    val city: String = "",
+    val ownerFullName: String = "",
+    val bankAccount: String = "",
+    val icon: String = "VECTOR:Business",
+    val isLoading: Boolean = false,
+    val error: String? = null
+)
+
+// ✅ Definicja zdarzeń
+sealed class UiEvent {
+    object SaveSuccess : UiEvent()
+    data class ShowError(val message: String) : UiEvent()
+}
 
 class CompanyFormViewModel(
     private val companyRepository: CompanyRepository,
@@ -19,20 +41,19 @@ class CompanyFormViewModel(
     private val _uiEvent = MutableSharedFlow<UiEvent>()
     val uiEvent = _uiEvent.asSharedFlow()
 
-    // Aktualizacja NIP (tylko cyfry, max 10)
+    // --- Metody aktualizacji pól ---
+
     fun updateNip(input: String) {
         val filtered = input.filter { it.isDigit() }.take(10)
         _uiState.update { it.copy(nip = filtered, error = null) }
     }
 
-    // Kod pocztowy (XX-XXX)
     fun updatePostalCode(input: String) {
         val digits = input.filter { it.isDigit() }.take(5)
         val formatted = if (digits.length > 2) "${digits.take(2)}-${digits.drop(2)}" else digits
         _uiState.update { it.copy(postalCode = formatted, error = null) }
     }
 
-    // Konto bankowe (spacje co 4 cyfry)
     fun updateBankAccount(input: String) {
         val digits = input.filter { it.isDigit() }.take(26)
         val formatted = StringBuilder()
@@ -48,6 +69,8 @@ class CompanyFormViewModel(
     fun updateCity(city: String) = _uiState.update { it.copy(city = city) }
     fun updateOwner(owner: String) = _uiState.update { it.copy(ownerFullName = owner) }
     fun updateIcon(icon: String) = _uiState.update { it.copy(icon = icon) }
+
+    // --- Logika pobierania z GUS ---
 
     fun loadDataFromNip(nip: String) {
         if (nip.length != 10) {
@@ -75,16 +98,12 @@ class CompanyFormViewModel(
         }
     }
 
+    // --- Zapis firmy ---
+
     fun saveCompany() {
         val s = uiState.value
-        val validationError = when {
-            s.nip.length != 10 -> "Podaj 10 cyfr NIP"
-            s.name.isBlank() -> "Podaj nazwę firmy"
-            else -> null
-        }
-
-        if (validationError != null) {
-            _uiState.update { it.copy(error = validationError) }
+        if (s.nip.length != 10 || s.name.isBlank()) {
+            _uiState.update { it.copy(error = "Wypełnij wymagane pola (NIP, Nazwa)") }
             return
         }
 
@@ -92,9 +111,16 @@ class CompanyFormViewModel(
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val newCompany = Company(
-                    id = s.id, nip = s.nip, name = s.name, address = s.address,
-                    postalCode = s.postalCode, city = s.city,
-                    ownerFullName = s.ownerFullName, bankAccount = s.bankAccount, icon = s.icon
+                    id = s.id,
+                    nip = s.nip,
+                    name = s.name,
+                    address = s.address,
+                    postalCode = s.postalCode,
+                    city = s.city,
+                    ownerFullName = s.ownerFullName,
+                    bankAccount = s.bankAccount,
+                    icon = s.icon,
+                    userId = "" // Zostaw puste lub pobierz z Auth
                 )
                 companyRepository.insertCompany(newCompany)
                 _uiEvent.emit(UiEvent.SaveSuccess)

@@ -1,14 +1,7 @@
 package com.example.e_faktura.ui.dashboard
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -29,14 +22,16 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel // ✅ Zmieniono z hilt
 import androidx.navigation.NavController
+import com.example.e_faktura.ui.AppViewModelProvider // ✅ Dodano naszą fabrykę
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatisticsScreen(
     navController: NavController,
-    statisticsViewModel: StatisticsViewModel = hiltViewModel(),
+    // ✅ Używamy ręcznej fabryki zamiast hiltViewModel()
+    statisticsViewModel: StatisticsViewModel = viewModel(factory = AppViewModelProvider.Factory),
     onOverdueClick: () -> Unit
 ) {
     val uiState by statisticsViewModel.uiState.collectAsState()
@@ -52,43 +47,49 @@ fun StatisticsScreen(
                 }
             )
         }
-    ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(it)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item {
-                Text(
-                    text = "Wyniki za ${uiState.currentMonth}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                )
+    ) { paddingValues ->
+        if (uiState.isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
             }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    StatCard(modifier = Modifier.weight(1f), data = StatCardInfo("Przychody", uiState.revenue, Icons.AutoMirrored.Filled.TrendingUp, Color(0xFF4CAF50)))
-                    StatCard(modifier = Modifier.weight(1f), data = StatCardInfo("Koszty", uiState.costs, Icons.AutoMirrored.Filled.TrendingDown, Color(0xFFF44336)))
-                }
-            }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    StatCard(modifier = Modifier.weight(1f), data = StatCardInfo("Bilans VAT", uiState.vatBalance, Icons.Filled.AccountBalance, Color(0xFF2196F3)))
-                    StatCard(modifier = Modifier.weight(1f), data = StatCardInfo("Oczekujące", uiState.pendingAmount, Icons.Filled.HourglassEmpty, Color(0xFFFF9800)))
-                }
-            }
-
-            if (uiState.overdueCount > 0) {
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 item {
-                    OverdueAlertCard(
-                        count = uiState.overdueCount,
-                        amount = uiState.overdueAmount,
-                        onClick = onOverdueClick
+                    Text(
+                        text = "Wyniki za ${uiState.currentMonth}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
                     )
+                }
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        StatCard(modifier = Modifier.weight(1f), data = StatCardInfo("Przychody", uiState.revenue, Icons.AutoMirrored.Filled.TrendingUp, Color(0xFF4CAF50)))
+                        StatCard(modifier = Modifier.weight(1f), data = StatCardInfo("Koszty", uiState.costs, Icons.AutoMirrored.Filled.TrendingDown, Color(0xFFF44336)))
+                    }
+                }
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        StatCard(modifier = Modifier.weight(1f), data = StatCardInfo("Bilans VAT", uiState.vatBalance, Icons.Filled.AccountBalance, Color(0xFF2196F3)))
+                        StatCard(modifier = Modifier.weight(1f), data = StatCardInfo("Oczekujące", uiState.pendingAmount, Icons.Filled.HourglassEmpty, Color(0xFFFF9800)))
+                    }
+                }
+
+                if (uiState.overdueCount > 0) {
+                    item {
+                        OverdueAlertCard(
+                            count = uiState.overdueCount,
+                            amount = uiState.overdueAmount,
+                            onClick = onOverdueClick
+                        )
+                    }
                 }
             }
         }
@@ -124,7 +125,7 @@ fun StatCard(modifier: Modifier = Modifier, data: StatCardInfo) {
                 Icon(imageVector = data.icon, contentDescription = data.label, tint = data.color, modifier = Modifier.size(28.dp))
             }
             Text(
-                text = "${String.format("%,.2f", data.value)} PLN",
+                text = "${String.format("%.2f", data.value)} PLN",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = data.color
@@ -150,7 +151,7 @@ fun OverdueAlertCard(count: Int, amount: Double, onClick: () -> Unit) {
             Icon(imageVector = Icons.Filled.Warning, contentDescription = "Ostrzeżenie", tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(32.dp))
             Column {
                 Text(text = "Przeterminowane faktury!", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
-                Text(text = "$count faktur na kwotę ${String.format("%,.2f", amount)} PLN", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onErrorContainer)
+                Text(text = "$count faktur na kwotę ${String.format("%.2f", amount)} PLN", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onErrorContainer)
             }
         }
     }

@@ -8,7 +8,8 @@ import androidx.room.TypeConverters
 import com.example.e_faktura.model.Company
 import com.example.e_faktura.model.Invoice
 
-@Database(entities = [Company::class, Invoice::class], version = 3, exportSchema = false)
+// ✅ Wersja 3 jest poprawna, jeśli poprzednia to 2.
+@Database(entities = [Company::class, Invoice::class], version = 4, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun companyDao(): CompanyDao
@@ -20,7 +21,12 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getDatabase(context: Context): AppDatabase {
             return Instance ?: synchronized(this) {
-                Room.databaseBuilder(context, AppDatabase::class.java, "efaktura_database")
+                Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    "efaktura_database"
+                )
+                    // ✅ To pozwoli uniknąć crasha przy zmianie kolumn (usuwa stare dane!)
                     .fallbackToDestructiveMigration()
                     .build()
                     .also { Instance = it }

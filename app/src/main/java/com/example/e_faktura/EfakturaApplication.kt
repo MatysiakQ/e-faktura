@@ -1,7 +1,17 @@
 package com.example.e_faktura
 
 import android.app.Application
-import dagger.hilt.android.HiltAndroidApp
+import com.example.e_faktura.data.AppContainer
+import com.example.e_faktura.data.DefaultAppContainer
 
-@HiltAndroidApp
-class EfakturaApplication : Application()
+class EfakturaApplication : Application() {
+    /**
+     * Instancja AppContainer używana przez resztę klas do uzyskiwania zależności.
+     */
+    lateinit var container: AppContainer
+
+    override fun onCreate() {
+        super.onCreate()
+        container = DefaultAppContainer(this)
+    }
+}

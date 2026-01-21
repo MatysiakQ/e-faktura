@@ -5,7 +5,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.items // ✅ Upewnij się, że to ten import
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -20,16 +20,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.e_faktura.model.Company
+import com.example.e_faktura.ui.AppViewModelProvider
 import com.example.e_faktura.ui.components.IconProvider
 
 @Composable
 fun CompanyListScreen(
     navController: NavController,
-    viewModel: CompanyListViewModel = hiltViewModel()
+    viewModel: CompanyListViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -38,7 +39,8 @@ fun CompanyListScreen(
             uiState.isLoading -> {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
-            uiState.companyList.isEmpty() -> {
+            // ✅ Zmieniono na companies, aby było spójne ze stanem ViewModelu
+            uiState.companies.isEmpty() -> {
                 Text(
                     text = "Brak firm. Dodaj nową.",
                     modifier = Modifier.align(Alignment.Center),
@@ -51,7 +53,8 @@ fun CompanyListScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(uiState.companyList, key = { it.id }) { company ->
+                    // ✅ Poprawiona składnia items, aby uniknąć błędu 'Argument type mismatch'
+                    items(items = uiState.companies, key = { company -> company.id }) { company ->
                         CompanyListItem(company = company) {
                             navController.navigate("company_details/${company.id}")
                         }

@@ -13,11 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,9 +27,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.e_faktura.ui.AppViewModelProvider
 import com.example.e_faktura.ui.auth.AuthUiState
 import com.example.e_faktura.ui.auth.AuthViewModel
 
@@ -41,7 +38,7 @@ import com.example.e_faktura.ui.auth.AuthViewModel
 @Composable
 fun MyAccountScreen(
     navController: NavController,
-    authViewModel: AuthViewModel = hiltViewModel()
+    authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val user by authViewModel.user.collectAsState()
     val uiState by authViewModel.uiState.collectAsState()
@@ -65,11 +62,12 @@ fun MyAccountScreen(
         }
     }
 
+    // ✅ Naprawione: Definicja dialogu znajduje się poniżej w tym samym pliku
     if (showChangePasswordDialog) {
         ChangePasswordDialog(
             onDismiss = { showChangePasswordDialog = false },
             uiState = uiState,
-            onConfirm = { newPassword -> authViewModel.changePassword(newPassword) }
+            onConfirm = { newPassword: String -> authViewModel.changePassword(newPassword) }
         )
     }
 
@@ -95,12 +93,14 @@ fun MyAccountScreen(
         ) {
             Spacer(Modifier.height(24.dp))
 
-            ProfileHeroSection(user?.photoUrl, user?.email) {
-                authViewModel.updateProfilePicture(it)
+            // ✅ Naprawione: Definicja sekcji profilu
+            ProfileHeroSection(user?.photoUrl, user?.email) { uri ->
+                authViewModel.updateProfilePicture(uri)
             }
 
             Spacer(Modifier.height(48.dp))
 
+            // ✅ Naprawione: Definicja sekcji bezpieczeństwa
             SecuritySection { showChangePasswordDialog = true }
 
             Spacer(Modifier.weight(1f))
@@ -112,19 +112,24 @@ fun MyAccountScreen(
                         popUpTo(navController.graph.id) { inclusive = true }
                     }
                 },
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                modifier = Modifier.padding(vertical = 16.dp)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                modifier = Modifier.padding(vertical = 16.dp).fillMaxWidth()
             ) {
                 Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                Spacer(Modifier.size(8.dp))
                 Text("Wyloguj się")
             }
         }
     }
 }
 
+// --- FUNKCJE POMOCNICZE (MUSZĄ BYĆ W TYM PLIKU) ---
+
 @Composable
-private fun ProfileHeroSection(photoUrl: Uri?, email: String?, onImageSelected: (Uri) -> Unit) {
+fun ProfileHeroSection(photoUrl: Uri?, email: String?, onImageSelected: (Uri) -> Unit) {
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri: Uri? -> uri?.let(onImageSelected) }
@@ -148,9 +153,12 @@ private fun ProfileHeroSection(photoUrl: Uri?, email: String?, onImageSelected: 
 
             IconButton(
                 onClick = { imagePicker.launch("image/*") },
-                modifier = Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.primary)
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary)
             ) {
-                Icon(Icons.Default.Edit, contentDescription = "Zmień zdjęcie", tint = Color.White)
+                Icon(Icons.Default.Edit, contentDescription = "Zmień zdjęcie", tint = Color.White, modifier = Modifier.size(20.dp))
             }
         }
         Text(email ?: "Brak adresu email", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -158,7 +166,7 @@ private fun ProfileHeroSection(photoUrl: Uri?, email: String?, onImageSelected: 
 }
 
 @Composable
-private fun SecuritySection(onChangePasswordClick: () -> Unit) {
+fun SecuritySection(onChangePasswordClick: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Zabezpieczenia", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -176,7 +184,7 @@ private fun SecuritySection(onChangePasswordClick: () -> Unit) {
 }
 
 @Composable
-private fun ChangePasswordDialog(
+fun ChangePasswordDialog(
     onDismiss: () -> Unit,
     uiState: AuthUiState,
     onConfirm: (String) -> Unit
@@ -217,11 +225,11 @@ private fun ChangePasswordDialog(
             Button(
                 onClick = {
                     if (newPassword.length < 6) {
-                        Toast.makeText(context, "Hasło musi mieć co najmniej 6 znaków.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Hasło musi mieć min. 6 znaków", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
                     if (newPassword != confirmPassword) {
-                        Toast.makeText(context, "Hasła nie są takie same.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Hasła nie są identyczne", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
                     onConfirm(newPassword)

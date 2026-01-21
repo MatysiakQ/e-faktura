@@ -44,12 +44,13 @@ import com.example.e_faktura.ui.components.IconProvider
 @Composable
 fun AddCompanyScreen(
     navController: NavController,
+    // ✅ Korzystamy z ręcznej fabryki DI, aby uniknąć błędu 'No initializer set'
     viewModel: CompanyFormViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    // Launcher do galerii zdjęć
+    // Obsługa wybierania zdjęć z galerii
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
@@ -58,6 +59,7 @@ fun AddCompanyScreen(
         }
     }
 
+    // ✅ Obsługa zdarzeń jednorazowych (Sukces/Błąd)
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { event ->
             when (event) {
@@ -96,12 +98,14 @@ fun AddCompanyScreen(
             ) {
                 Spacer(Modifier.height(16.dp))
 
-                // Awatar obsługujący CUSTOM (AsyncImage) i VECTOR (Icon)
+                // Awatar z możliwością edycji i wyboru ikony
                 CompanyAvatar(iconString = state.icon, onClick = { showIconPicker = true })
 
                 Spacer(Modifier.height(24.dp))
 
-                // Pole NIP
+                // --- FORMULARZ DANYCH ---
+
+                // Pole NIP z przyciskiem wyszukiwania w GUS
                 OutlinedTextField(
                     value = state.nip,
                     onValueChange = { viewModel.updateNip(it) },
@@ -109,13 +113,21 @@ fun AddCompanyScreen(
                     modifier = Modifier.fillMaxWidth(),
                     isError = state.error?.contains("NIP") == true,
                     supportingText = {
-                        if (state.error?.contains("NIP") == true) Text(state.error!!, color = MaterialTheme.colorScheme.error)
+                        if (state.error?.contains("NIP") == true) {
+                            Text(state.error!!, color = MaterialTheme.colorScheme.error)
+                        }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Search),
                     trailingIcon = {
-                        if (state.isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                        else IconButton(onClick = { viewModel.loadDataFromNip(state.nip) }, enabled = state.nip.length == 10) {
-                            Icon(Icons.Filled.Search, contentDescription = "Szukaj w GUS")
+                        if (state.isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        } else {
+                            IconButton(
+                                onClick = { viewModel.loadDataFromNip(state.nip) },
+                                enabled = state.nip.length == 10
+                            ) {
+                                Icon(Icons.Filled.Search, contentDescription = "Szukaj w GUS")
+                            }
                         }
                     },
                     shape = RoundedCornerShape(12.dp)
@@ -123,23 +135,18 @@ fun AddCompanyScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Nazwa firmy
                 OutlinedTextField(
                     value = state.name,
                     onValueChange = { viewModel.updateName(it) },
                     label = { Text("Nazwa firmy") },
                     modifier = Modifier.fillMaxWidth(),
                     isError = state.error?.contains("nazwę") == true,
-                    supportingText = {
-                        if (state.error?.contains("nazwę") == true) Text(state.error!!, color = MaterialTheme.colorScheme.error)
-                    },
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
                     shape = RoundedCornerShape(12.dp)
                 )
 
                 Spacer(Modifier.height(16.dp))
 
-                // Adres
                 OutlinedTextField(
                     value = state.address,
                     onValueChange = { viewModel.updateAddress(it) },
@@ -151,7 +158,6 @@ fun AddCompanyScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Kod i Miasto
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = state.postalCode,
@@ -175,7 +181,6 @@ fun AddCompanyScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Konto bankowe
                 OutlinedTextField(
                     value = state.bankAccount,
                     onValueChange = { viewModel.updateBankAccount(it) },
@@ -206,6 +211,7 @@ fun AddCompanyScreen(
         }
     }
 
+    // Dialog wyboru ikony lub zdjęcia z galerii
     if (showIconPicker) {
         IconPickerDialog(
             onDismiss = { showIconPicker = false },
@@ -213,7 +219,6 @@ fun AddCompanyScreen(
                 viewModel.updateIcon("${selectedIcon.type}:${selectedIcon.value}")
                 showIconPicker = false
             },
-            // ✅ Teraz ten parametr zadziała z nowym dialogiem
             onPickFromGallery = {
                 photoPickerLauncher.launch(
                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -247,9 +252,11 @@ private fun CompanyAvatar(iconString: String, onClick: () -> Unit) {
                 contentScale = ContentScale.Crop
             )
         } else {
-            val iconVector = if (value != null) try {
-                IconProvider.getIcon(value)
-            } catch (e: Exception) { Icons.Default.Business } else Icons.Default.Business
+            val iconVector = if (value != null) {
+                try {
+                    IconProvider.getIcon(value)
+                } catch (e: Exception) { Icons.Default.Business }
+            } else Icons.Default.Business
 
             Icon(
                 imageVector = iconVector,

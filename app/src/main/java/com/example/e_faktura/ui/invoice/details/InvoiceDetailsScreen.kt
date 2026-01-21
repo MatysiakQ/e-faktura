@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -19,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.e_faktura.ui.AppViewModelProvider
+import com.example.e_faktura.utils.PdfInvoiceGenerator
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -27,11 +29,21 @@ import java.util.*
 fun InvoiceDetailsScreen(
     invoiceId: String?,
     navController: NavController,
+    // ✅ Korzystamy z naszej ręcznej fabryki bez Hilta
     viewModel: InvoiceDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
 
+    // ✅ Inicjalizacja ładowania faktury po wejściu na ekran
+    LaunchedEffect(invoiceId) {
+        if (invoiceId != null) {
+            viewModel.loadInvoice(invoiceId)
+        }
+    }
+
+    // Dialog potwierdzenia usunięcia
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -62,7 +74,11 @@ fun InvoiceDetailsScreen(
                 },
                 actions = {
                     IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Usuń", tint = MaterialTheme.colorScheme.error)
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Usuń",
+                            tint = MaterialTheme.colorScheme.error
+                        )
                     }
                 }
             )
@@ -71,7 +87,11 @@ fun InvoiceDetailsScreen(
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             when {
                 uiState.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                uiState.error != null -> Text("Błąd: ${uiState.error}", Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.error)
+                uiState.error != null -> Text(
+                    text = "Błąd: ${uiState.error}",
+                    modifier = Modifier.align(Alignment.Center),
+                    color = MaterialTheme.colorScheme.error
+                )
                 uiState.invoice != null -> {
                     val invoice = uiState.invoice!!
                     Column(
@@ -81,7 +101,7 @@ fun InvoiceDetailsScreen(
                             .verticalScroll(rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // KARTA KWOTY - WYŚRODKOWANA
+                        // KARTA PODSUMOWANIA PŁATNOŚCI
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(28.dp),
@@ -91,34 +111,28 @@ fun InvoiceDetailsScreen(
                             )
                         ) {
                             Column(
-                                modifier = Modifier
-                                    .padding(24.dp)
-                                    .fillMaxWidth(),
+                                modifier = Modifier.padding(24.dp).fillMaxWidth(),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
                                     text = "KWOTA DO ZAPŁATY",
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.fillMaxWidth(),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = "${String.format("%,.2f", invoice.amount)} PLN",
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.fillMaxWidth(),
                                     fontSize = 36.sp,
                                     fontWeight = FontWeight.ExtraBold
                                 )
 
                                 Spacer(Modifier.height(16.dp))
 
-                                // PRZYCISK ZMIANY STATUSU PŁATNOŚCI
                                 Button(
                                     onClick = { viewModel.togglePaidStatus() },
                                     shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (invoice.isPaid) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                                        containerColor = if (invoice.isPaid) MaterialTheme.colorScheme.error
+                                        else MaterialTheme.colorScheme.primary
                                     )
                                 ) {
                                     Icon(if (invoice.isPaid) Icons.Default.Close else Icons.Default.Check, null)
@@ -130,37 +144,41 @@ fun InvoiceDetailsScreen(
 
                         Spacer(Modifier.height(24.dp))
 
-                        // SEKCJE DANYCH
+                        // SEKCJA: DANE FAKTURY
                         InfoSection(title = "DANE FAKTURY") {
+                            // ✅ Używamy invoiceNumber zamiast number
                             DetailRow(Icons.Default.Numbers, "Numer", invoice.invoiceNumber)
-                            DetailRow(Icons.Default.CalendarToday, "Data wystawienia", formatDate(invoice.date))
+                            // ✅ Używamy dueDate dla daty płatności
                             DetailRow(Icons.Default.Event, "Termin płatności", formatDate(invoice.dueDate))
                         }
 
                         Spacer(Modifier.height(16.dp))
 
+                        // SEKCJA: NABYWCA
                         InfoSection(title = "NABYWCA") {
                             DetailRow(Icons.Default.Business, "Nazwa", invoice.buyerName)
+                            // ✅ buyerNip jest teraz dostępny w modelu
                             DetailRow(Icons.Default.Badge, "NIP", invoice.buyerNip)
                         }
 
                         Spacer(Modifier.height(32.dp))
 
-                        // CIEMNY PRZYCISK PDF
+                        // PRZYCISK GENEROWANIA PDF
                         Button(
-                            onClick = { /* TODO: Wywołaj PdfInvoiceGenerator */ },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
+                            onClick = {
+                                // ✅ Wywołanie generatora PDF
+                                PdfInvoiceGenerator.generateAndOpenPdf(context, invoice)
+                            },
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
                             shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         ) {
                             Icon(Icons.Default.PictureAsPdf, null)
                             Spacer(Modifier.width(8.dp))
-                            Text("GENERUJ PDF", fontWeight = FontWeight.Bold)
+                            Text("GENERUJ I OTWÓRZ PDF", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -172,8 +190,17 @@ fun InvoiceDetailsScreen(
 @Composable
 fun InfoSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
-        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+        )
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+        ) {
             Column(modifier = Modifier.padding(20.dp)) { content() }
         }
     }
@@ -186,9 +213,14 @@ fun DetailRow(icon: ImageVector, label: String, value: String) {
         Spacer(Modifier.width(16.dp))
         Column {
             Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(if(value.isBlank()) "Brak danych" else value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+            Text(
+                text = if (value.isBlank()) "Brak danych" else value,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }
 
-fun formatDate(timestamp: Long): String = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(timestamp))
+fun formatDate(timestamp: Long): String =
+    SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(timestamp))

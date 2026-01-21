@@ -1,7 +1,6 @@
 package com.example.e_faktura
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -34,7 +33,6 @@ import com.example.e_faktura.ui.core.SplashScreen
 import com.example.e_faktura.ui.dashboard.StatisticsScreen
 import com.example.e_faktura.ui.invoice.add.AddInvoiceScreen
 import com.example.e_faktura.ui.invoice.list.InvoiceDashboardScreen
-// ✅ Pamiętaj, aby stworzyć ten plik w ui.invoice.details
 import com.example.e_faktura.ui.invoice.details.InvoiceDetailsScreen
 import com.example.e_faktura.ui.navigation.Screen
 import com.example.e_faktura.ui.navigation.bottomNavItems
@@ -51,13 +49,13 @@ class MainActivity : ComponentActivity() {
                 NavHost(navController = rootNavController, startDestination = Screen.Splash.route) {
                     composable(Screen.Splash.route) { SplashScreen(navController = rootNavController) }
                     composable(Screen.MainApp.route) { AppScaffold(rootNavController = rootNavController) }
+
+                    // ✅ POPRAWKA: Nie przekazujemy ViewModelu ręcznie
                     composable(Screen.Login.route) {
-                        val authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
-                        LoginScreen(navController = rootNavController, authViewModel = authViewModel)
+                        LoginScreen(navController = rootNavController)
                     }
                     composable(Screen.Register.route) {
-                        val authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
-                        RegistrationScreen(navController = rootNavController, authViewModel = authViewModel)
+                        RegistrationScreen(navController = rootNavController)
                     }
                 }
             }
@@ -69,6 +67,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppScaffold(rootNavController: NavHostController) {
     val navController = rememberNavController()
+    // Używamy naszej fabryki
     val authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val user by authViewModel.user.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
@@ -77,14 +76,12 @@ fun AppScaffold(rootNavController: NavHostController) {
     val currentRoute = navBackStackEntry?.destination?.route
     val rootRoutes = remember { bottomNavItems.map { it.route } }
 
-    // ✅ AKTUALIZACJA: Dodano invoice_details do tras pełnoekranowych
     val isFullScreenRoute = currentRoute == Screen.AddCompany.route
             || currentRoute == Screen.AddInvoice.route
             || currentRoute?.startsWith("company_details/") == true
             || currentRoute?.startsWith("invoice_details/") == true
 
     val showGlobalBars = currentRoute in rootRoutes && !isFullScreenRoute
-
     val isLoggedIn = user != null && user?.isAnonymous == false
 
     Scaffold(
@@ -94,7 +91,7 @@ fun AppScaffold(rootNavController: NavHostController) {
                     title = { Text(if (isLoggedIn) user?.email ?: "e-Faktura" else "Witaj, Gościu") },
                     actions = {
                         IconButton(onClick = { showMenu = !showMenu }) {
-                            Icon(imageVector = Icons.Filled.MoreVert, contentDescription = "Menu")
+                            Icon(Icons.Default.MoreVert, contentDescription = "Menu")
                         }
                         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                             if (isLoggedIn) {
@@ -117,7 +114,6 @@ fun AppScaffold(rootNavController: NavHostController) {
                                     }
                                 )
                             }
-                            DropdownMenuItem(text = { Text("Ustawienia") }, onClick = { /* TODO */ ; showMenu = false })
                         }
                     }
                 )
@@ -131,7 +127,7 @@ fun AppScaffold(rootNavController: NavHostController) {
                         Screen.Companies.route -> navController.navigate(Screen.AddCompany.route)
                     }
                 }) {
-                    Icon(Icons.Filled.Add, contentDescription = "Dodaj")
+                    Icon(Icons.Default.Add, contentDescription = "Dodaj")
                 }
             }
         },
@@ -161,7 +157,13 @@ fun AppScaffold(rootNavController: NavHostController) {
         NavHost(navController = navController, startDestination = Screen.Home.route, modifier = Modifier.padding(innerPadding)) {
             composable(Screen.Home.route) { InvoiceDashboardScreen(navController = navController) }
             composable(Screen.Companies.route) { CompanyListScreen(navController = navController) }
-            composable(Screen.Statistics.route) { StatisticsScreen(navController = navController, statisticsViewModel = viewModel(factory = AppViewModelProvider.Factory), onOverdueClick = {}) }
+            composable(Screen.Statistics.route) {
+                StatisticsScreen(
+                    navController = navController,
+                    statisticsViewModel = viewModel(factory = AppViewModelProvider.Factory),
+                    onOverdueClick = {}
+                )
+            }
             composable(Screen.AddCompany.route) { AddCompanyScreen(navController = navController) }
             composable(Screen.AddInvoice.route) { AddInvoiceScreen(navController = navController, onInvoiceAdded = { navController.popBackStack() }) }
             composable(Screen.QrScanner.route) {
@@ -170,27 +172,15 @@ fun AppScaffold(rootNavController: NavHostController) {
                     navController.popBackStack()
                 })
             }
-
-            // --- Szczegóły Firmy ---
             composable(
                 route = "company_details/{companyId}",
                 arguments = listOf(navArgument("companyId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val companyId = backStackEntry.arguments?.getString("companyId")
-                CompanyDetailsScreen(navController = navController)
-            }
+            ) { CompanyDetailsScreen(navController = navController) }
 
-            // ✅ NOWOŚĆ: Szczegóły Faktury (To naprawi crash!)
             composable(
                 route = "invoice_details/{invoiceId}",
                 arguments = listOf(navArgument("invoiceId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val invoiceId = backStackEntry.arguments?.getString("invoiceId")
-                InvoiceDetailsScreen(
-                    invoiceId = invoiceId,
-                    navController = navController
-                )
-            }
+            ) { InvoiceDetailsScreen(navController = navController, invoiceId = it.arguments?.getString("invoiceId")) }
         }
     }
 }

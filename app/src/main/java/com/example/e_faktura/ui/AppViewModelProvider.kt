@@ -8,37 +8,44 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.e_faktura.EfakturaApplication
 import com.example.e_faktura.ui.auth.AuthViewModel
 import com.example.e_faktura.ui.company.add.CompanyFormViewModel
-import com.example.e_faktura.ui.company.details.CompanyDetailsViewModel
 import com.example.e_faktura.ui.company.list.CompanyListViewModel
 import com.example.e_faktura.ui.dashboard.StatisticsViewModel
 import com.example.e_faktura.ui.invoice.add.InvoiceViewModel
 import com.example.e_faktura.ui.invoice.details.InvoiceDetailsViewModel
 import com.example.e_faktura.ui.invoice.list.InvoiceListViewModel
 
+/**
+ * Dostarcza fabrykę do tworzenia wszystkich ViewModeli w aplikacji.
+ * Eliminuje potrzebę korzystania z biblioteki Hilt.
+ */
 object AppViewModelProvider {
     val Factory = viewModelFactory {
+        // Autoryzacja
         initializer { AuthViewModel() }
 
+        // Statystyki
         initializer {
-            CompanyListViewModel(efakturaApplication().container.companyRepository)
-        }
-
-        initializer {
-            CompanyFormViewModel(
-                efakturaApplication().container.companyRepository,
-                efakturaApplication().container.gusRepository
+            StatisticsViewModel(
+                invoiceRepository = efakturaApplication().container.invoiceRepository
             )
         }
 
-        // ✅ ZSYNCHRONIZOWANO: 3 parametry (Invoice, Company, Gus)
+        // Formularz Dodawania/Edycji Firmy
         initializer {
-            InvoiceViewModel(
-                invoiceRepository = efakturaApplication().container.invoiceRepository,
+            CompanyFormViewModel(
                 companyRepository = efakturaApplication().container.companyRepository,
                 gusRepository = efakturaApplication().container.gusRepository
             )
         }
 
+        // Lista Firm
+        initializer {
+            CompanyListViewModel(
+                companyRepository = efakturaApplication().container.companyRepository
+            )
+        }
+
+        // Lista Faktur
         initializer {
             InvoiceListViewModel(
                 invoiceRepository = efakturaApplication().container.invoiceRepository,
@@ -46,25 +53,27 @@ object AppViewModelProvider {
             )
         }
 
-        initializer {
-            StatisticsViewModel(efakturaApplication().container.invoiceRepository)
-        }
-
+        // Szczegóły Faktury - wymaga SavedStateHandle do odczytu ID z URL
         initializer {
             InvoiceDetailsViewModel(
-                this.createSavedStateHandle(),
-                efakturaApplication().container.invoiceRepository
+                savedStateHandle = this.createSavedStateHandle(),
+                invoiceRepository = efakturaApplication().container.invoiceRepository
             )
         }
 
+        // Dodawanie Faktury
         initializer {
-            CompanyDetailsViewModel(
-                this.createSavedStateHandle(),
-                efakturaApplication().container.companyRepository
+            InvoiceViewModel(
+                invoiceRepository = efakturaApplication().container.invoiceRepository,
+                companyRepository = efakturaApplication().container.companyRepository,
+                gusRepository = efakturaApplication().container.gusRepository
             )
         }
     }
 }
 
+/**
+ * Rozszerzenie ułatwiające dostęp do instancji aplikacji i kontenera danych.
+ */
 fun CreationExtras.efakturaApplication(): EfakturaApplication =
     (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as EfakturaApplication)

@@ -25,7 +25,9 @@ class InvoiceRepository(
             try {
                 val snapshot = firestore.collection("users").document(currentUserId)
                     .collection("invoices").document(id).get().await()
-                snapshot.toObject(Invoice::class.java)
+
+                // Jeśli nie ma w Firebase, szukaj lokalnie
+                snapshot.toObject(Invoice::class.java) ?: invoiceDao.getInvoiceById(id)
             } catch (e: Exception) {
                 invoiceDao.getInvoiceById(id)
             }
@@ -46,7 +48,6 @@ class InvoiceRepository(
                             return@addSnapshotListener
                         }
                         if (snapshot != null) {
-                            // ✅ Naprawiono deprecation: używamy toObject na liście
                             val invoices = snapshot.documents.mapNotNull { it.toObject(Invoice::class.java) }
                             trySend(invoices)
                         }
@@ -58,8 +59,12 @@ class InvoiceRepository(
 
     suspend fun addInvoice(invoice: Invoice) {
         val currentUserId = userId
-        val invoiceWithUser = if (currentUserId != null) invoice.copy(sellerId = currentUserId) else invoice
-        invoiceDao.insert(invoiceWithUser)
+        // ✅ NAPRAWIONO: 'userId' zamiast 'sellerId'
+        val invoiceWithUser = if (currentUserId != null) invoice.copy(userId = currentUserId) else invoice
+
+        // ✅ NAPRAWIONO: 'insertInvoice' zamiast 'insert'
+        invoiceDao.insertInvoice(invoiceWithUser)
+
         if (currentUserId != null) {
             firestore.collection("users").document(currentUserId)
                 .collection("invoices").document(invoice.id).set(invoiceWithUser).await()
@@ -68,7 +73,9 @@ class InvoiceRepository(
 
     suspend fun updateInvoice(invoice: Invoice) {
         val currentUserId = userId
-        invoiceDao.update(invoice)
+        // ✅ NAPRAWIONO: 'updateInvoice' zamiast 'update'
+        invoiceDao.updateInvoice(invoice)
+
         if (currentUserId != null) {
             firestore.collection("users").document(currentUserId)
                 .collection("invoices").document(invoice.id).set(invoice).await()
@@ -77,7 +84,9 @@ class InvoiceRepository(
 
     suspend fun deleteInvoice(invoice: Invoice) {
         val currentUserId = userId
-        invoiceDao.delete(invoice)
+        // ✅ NAPRAWIONO: 'deleteInvoice' zamiast 'delete'
+        invoiceDao.deleteInvoice(invoice)
+
         if (currentUserId != null) {
             firestore.collection("users").document(currentUserId)
                 .collection("invoices").document(invoice.id).delete().await()

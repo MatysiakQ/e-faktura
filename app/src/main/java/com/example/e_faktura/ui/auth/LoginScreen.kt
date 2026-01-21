@@ -9,18 +9,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel // ✅ ZMIENIONO
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.example.e_faktura.ui.AppViewModelProvider // ✅ DODANO
 
 @Composable
 fun LoginScreen(
     navController: NavController,
-    viewModel: AuthViewModel = hiltViewModel()
+    // ✅ UŻYWAMY RĘCZNEJ FABRYKI
+    viewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
@@ -29,7 +30,6 @@ fun LoginScreen(
             navController.navigate("dashboard") {
                 popUpTo("login") { inclusive = true }
             }
-            // POPRAWKA: Używamy nowej nazwy funkcji
             viewModel.resetAuthState()
         }
     }
@@ -41,38 +41,19 @@ fun LoginScreen(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        if (uiState.isLoading) {
-            CircularProgressIndicator()
-        }
+        if (uiState.isLoading) CircularProgressIndicator()
 
-        TextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        TextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
         Spacer(modifier = Modifier.height(8.dp))
-        TextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Hasło") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
-        )
+        TextField(value = password, onValueChange = { password = it }, label = { Text("Hasło") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
         Spacer(modifier = Modifier.height(16.dp))
-        Button(
-            onClick = { viewModel.login(email, password) },
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        Button(onClick = { viewModel.login(email, password) }, modifier = Modifier.fillMaxWidth()) {
             Text("Zaloguj się")
         }
-        Spacer(modifier = Modifier.height(8.dp))
         TextButton(onClick = { navController.navigate("register") }) {
             Text("Nie masz konta? Zarejestruj się")
         }

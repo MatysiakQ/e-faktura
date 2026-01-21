@@ -10,26 +10,31 @@ import kotlinx.coroutines.launch
 
 data class InvoiceDetailsUiState(
     val invoice: Invoice? = null,
-    val isLoading: Boolean = true,
+    val isLoading: Boolean = false,
     val error: String? = null
 )
 
 class InvoiceDetailsViewModel(
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
     private val invoiceRepository: InvoiceRepository
 ) : ViewModel() {
 
-    private val invoiceId: String = checkNotNull(savedStateHandle["invoiceId"])
     private val _uiState = MutableStateFlow(InvoiceDetailsUiState())
     val uiState: StateFlow<InvoiceDetailsUiState> = _uiState.asStateFlow()
 
-    init { loadInvoice() }
+    // Pobieramy ID faktury z argumentów nawigacji
+    private val invoiceId: String? = savedStateHandle["invoiceId"]
 
-    private fun loadInvoice() {
+    init {
+        invoiceId?.let { loadInvoice(it) }
+    }
+
+    fun loadInvoice(id: String) {
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
             try {
-                val invoice = invoiceRepository.getInvoiceById(invoiceId)
-                _uiState.update { it.copy(invoice = invoice, isLoading = false) }
+                val result = invoiceRepository.getInvoiceById(id)
+                _uiState.update { it.copy(invoice = result, isLoading = false) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message, isLoading = false) }
             }
@@ -37,27 +42,19 @@ class InvoiceDetailsViewModel(
     }
 
     fun togglePaidStatus() {
-        val currentInvoice = uiState.value.invoice ?: return
+        val currentInvoice = _uiState.value.invoice ?: return
         viewModelScope.launch {
-            try {
-                val updatedInvoice = currentInvoice.copy(isPaid = !currentInvoice.isPaid)
-                invoiceRepository.updateInvoice(updatedInvoice)
-                _uiState.update { it.copy(invoice = updatedInvoice) }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Błąd aktualizacji statusu") }
-            }
+            val updated = currentInvoice.copy(isPaid = !currentInvoice.isPaid)
+            invoiceRepository.updateInvoice(updated)
+            _uiState.update { it.copy(invoice = updated) }
         }
     }
 
     fun deleteInvoice(onSuccess: () -> Unit) {
-        val invoice = uiState.value.invoice ?: return
+        val currentInvoice = _uiState.value.invoice ?: return
         viewModelScope.launch {
-            try {
-                invoiceRepository.deleteInvoice(invoice)
-                onSuccess()
-            } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Błąd usuwania") }
-            }
+            invoiceRepository.deleteInvoice(currentInvoice)
+            onSuccess()
         }
     }
 }

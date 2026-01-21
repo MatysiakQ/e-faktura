@@ -6,10 +6,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Business
-import androidx.compose.material.icons.filled.Search // ✅ DODANO
+import androidx.compose.material.icons.filled.Numbers // ✅ DODANO
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment // ✅ DODANO
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -38,6 +39,21 @@ fun AddInvoiceScreen(
             text = "Nowa faktura",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        // ✅ DODANO: Pole Numer Faktury (Tego brakowało!)
+        OutlinedTextField(
+            value = state.invoiceNumber,
+            onValueChange = { viewModel.updateNumber(it) },
+            label = { Text("Numer faktury") },
+            modifier = Modifier.fillMaxWidth(),
+            leadingIcon = { Icon(Icons.Default.Numbers, null) },
+            placeholder = { Text("np. FV/2026/01/01") },
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true,
+            isError = state.error?.contains("Numer") == true
         )
 
         Spacer(Modifier.height(16.dp))
@@ -104,7 +120,7 @@ fun AddInvoiceScreen(
             }
         }
 
-        // Komunikat o błędzie (np. nie znaleziono NIP w GUS)
+        // Komunikat o błędzie
         if (state.error != null) {
             Text(
                 text = state.error!!,
