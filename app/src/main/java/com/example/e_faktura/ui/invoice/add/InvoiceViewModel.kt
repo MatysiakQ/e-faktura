@@ -2,127 +2,88 @@ package com.example.e_faktura.ui.invoice.add
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.e_faktura.data.repository.CompanyRepository
+import com.example.e_faktura.data.repository.GusRepository
 import com.example.e_faktura.data.repository.InvoiceRepository
-import com.example.e_faktura.model.GusData
+import com.example.e_faktura.model.Company
 import com.example.e_faktura.model.Invoice
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
 import java.util.UUID
 
-data class AddInvoiceUiState(
+data class InvoiceUiState(
     val buyerName: String = "",
     val buyerNip: String = "",
-    val buyerAddress: String = "",
-    val issueDate: Long = System.currentTimeMillis(),
-    val paymentDueDate: Long = System.currentTimeMillis() + 14 * 24 * 60 * 60 * 1000, // Default to 14 days later
     val amount: String = "",
-    val isPaid: Boolean = false,
-    val nipToSearch: String = ""
+    val invoiceNumber: String = "",
+    val isSaving: Boolean = false,
+    val isLoadingGus: Boolean = false,
+    val error: String? = null
 )
 
 class InvoiceViewModel(
-    private val invoiceRepository: InvoiceRepository
+    private val invoiceRepository: InvoiceRepository,
+    private val companyRepository: CompanyRepository,
+    private val gusRepository: GusRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(AddInvoiceUiState())
-    val uiState: StateFlow<AddInvoiceUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(InvoiceUiState())
+    val uiState = _uiState.asStateFlow()
 
-    private val _gusSearchResult = MutableStateFlow<GusData?>(null)
-    val gusSearchResult: StateFlow<GusData?> = _gusSearchResult.asStateFlow()
+    val savedCompanies: StateFlow<List<Company>> = companyRepository.getAllCompaniesStream()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _isLoadingGus = MutableStateFlow(false)
-    val isLoadingGus: StateFlow<Boolean> = _isLoadingGus.asStateFlow()
+    fun updateBuyerName(name: String) { _uiState.update { it.copy(buyerName = name, error = null) } }
+    fun updateBuyerNip(nip: String) { _uiState.update { it.copy(buyerNip = nip, error = null) } }
+    fun updateAmount(amount: String) { _uiState.update { it.copy(amount = amount) } }
+    fun updateNumber(number: String) { _uiState.update { it.copy(invoiceNumber = number) } }
 
-    private val _nextInvoiceNumber = MutableStateFlow("")
-    val nextInvoiceNumber: StateFlow<String> = _nextInvoiceNumber.asStateFlow()
-
-    init {
-        generateNextInvoiceNumber()
+    fun selectCompany(company: Company) {
+        _uiState.update { it.copy(buyerName = company.name, buyerNip = company.nip) }
     }
 
-    private fun generateNextInvoiceNumber() {
-        viewModelScope.launch {
-            val allInvoices = invoiceRepository.getInvoices().first()
-            val now = LocalDate.now()
-            val year = now.year
-            val month = now.monthValue
+    // ✅ NAPRAWIONO: Wywołanie searchByNip i dostęp do .name
+    fun fetchCompanyFromGus() {
+        val nip = _uiState.value.buyerNip
+        if (nip.length != 10) {
+            _uiState.update { it.copy(error = "NIP musi mieć 10 cyfr") }
+            return
+        }
 
-            val invoicesThisMonth = allInvoices.filter {
-                val issueDate = Instant.ofEpochMilli(it.date).atZone(ZoneId.systemDefault()).toLocalDate()
-                issueDate.year == year && issueDate.monthValue == month
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingGus = true, error = null) }
+            try {
+                // Wywołujemy funkcję z Twojego Repository
+                val data = gusRepository.searchByNip(nip)
+                if (data != null) {
+                    // Używamy .name zgodnie z Twoim modelem
+                    _uiState.update { it.copy(buyerName = data.name, isLoadingGus = false) }
+                } else {
+                    _uiState.update { it.copy(error = "Nie znaleziono firmy w GUS", isLoadingGus = false) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Błąd: ${e.message}", isLoadingGus = false) }
             }
-            
-            val nextId = invoicesThisMonth.size + 1
-            _nextInvoiceNumber.value = "FV/$year/$month/${String.format("%02d", nextId)}"
         }
     }
 
-    fun onNipToSearchChange(nip: String) {
-        _uiState.update { it.copy(nipToSearch = nip) }
-    }
-
-    fun onBuyerNameChange(name: String) {
-        _uiState.update { it.copy(buyerName = name) }
-    }
-
-    fun onIssueDateChange(dateMillis: Long) {
-        _uiState.update { it.copy(issueDate = dateMillis) }
-    }
-
-    fun onPaymentDueDateChange(dateMillis: Long) {
-        _uiState.update { it.copy(paymentDueDate = dateMillis) }
-    }
-
-    fun onAmountChange(amount: String) {
-        _uiState.update { it.copy(amount = amount) }
-    }
-
-    fun fetchGusData(nip: String) {
+    fun saveInvoice(onInvoiceAdded: () -> Unit) {
         viewModelScope.launch {
-            _isLoadingGus.value = true
-            delay(1500) // Simulate network call
-            val result = GusData(
-                name = "Mock Klient Sp. z o.o.",
-                nip = nip,
-                address = "ul. Testowa 1, 00-001 Warszawa"
-            )
-            _gusSearchResult.value = result
-            _uiState.update {
-                it.copy(
-                    buyerName = result.name,
-                    buyerNip = result.nip,
-                    buyerAddress = result.address
+            _uiState.update { it.copy(isSaving = true) }
+            try {
+                val invoice = Invoice(
+                    id = UUID.randomUUID().toString(),
+                    invoiceNumber = _uiState.value.invoiceNumber,
+                    buyerName = _uiState.value.buyerName,
+                    buyerNip = _uiState.value.buyerNip,
+                    amount = _uiState.value.amount.toDoubleOrNull() ?: 0.0,
+                    date = System.currentTimeMillis()
                 )
+                invoiceRepository.addInvoice(invoice)
+                onInvoiceAdded()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isSaving = false, error = "Błąd zapisu") }
             }
-            _isLoadingGus.value = false
-        }
-    }
-
-    fun issueInvoice(onInvoiceIssued: () -> Unit) {
-        viewModelScope.launch {
-            val currentState = _uiState.value
-            val invoice = Invoice(
-                id = UUID.randomUUID().toString(),
-                invoiceNumber = _nextInvoiceNumber.value,
-                buyerName = currentState.buyerName,
-                buyerNip = currentState.buyerNip,
-                amount = currentState.amount.toDoubleOrNull() ?: 0.0,
-                date = currentState.issueDate,
-                dueDate = currentState.paymentDueDate,
-                isPaid = false
-            )
-            invoiceRepository.addInvoice(invoice)
-            // Regenerate number for the next invoice
-            generateNextInvoiceNumber()
-            onInvoiceIssued()
         }
     }
 }

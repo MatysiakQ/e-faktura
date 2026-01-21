@@ -5,11 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.e_faktura.data.repository.CompanyRepository
 import com.example.e_faktura.model.Company
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 data class CompanyDetailsUiState(
@@ -34,24 +30,34 @@ class CompanyDetailsViewModel(
 
     private fun loadCompany() {
         if (companyId == null) {
-            _uiState.value = CompanyDetailsUiState(isLoading = false, error = "Nie znaleziono firmy")
+            _uiState.update { it.copy(isLoading = false, error = "Brak ID firmy") }
             return
         }
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.update { it.copy(isLoading = true) }
             try {
-                val companyFlow = companyRepository.getCompanies().map {
-                    it.firstOrNull { company -> company.id == companyId }
-                }
-                val company = companyFlow.firstOrNull()
+                val company = companyRepository.getCompanyById(companyId)
                 if (company != null) {
-                    _uiState.value = CompanyDetailsUiState(company = company, isLoading = false)
+                    _uiState.update { it.copy(company = company, isLoading = false) }
                 } else {
-                    _uiState.value = CompanyDetailsUiState(isLoading = false, error = "Nie znaleziono firmy o podanym ID")
+                    _uiState.update { it.copy(isLoading = false, error = "Nie znaleziono firmy") }
                 }
             } catch (e: Exception) {
-                _uiState.value = CompanyDetailsUiState(isLoading = false, error = "Błąd wczytywania danych: ${e.message}")
+                _uiState.update { it.copy(isLoading = false, error = "Błąd: ${e.message}") }
+            }
+        }
+    }
+
+    // ✅ NOWA FUNKCJA: Logika usuwania wywoływana z UI
+    fun deleteCompany(onSuccess: () -> Unit) {
+        val company = uiState.value.company ?: return
+        viewModelScope.launch {
+            try {
+                companyRepository.deleteCompany(company)
+                onSuccess()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Nie udało się usunąć: ${e.message}") }
             }
         }
     }

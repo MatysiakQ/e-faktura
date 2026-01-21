@@ -2,29 +2,22 @@ package com.example.e_faktura.ui.invoice.list
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.ReceiptLong
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -46,8 +39,9 @@ fun InvoiceDashboardScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(vertical = 16.dp)
     ) {
         item {
             RevenueCard(
@@ -59,18 +53,23 @@ fun InvoiceDashboardScreen(
         item {
             Text(
                 text = "Ostatnie faktury",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(top = 8.dp)
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
             )
         }
 
         if (invoices.isEmpty()) {
-            item {
-                EmptyState()
-            }
+            item { EmptyState() }
         } else {
             items(invoices, key = { it.id }) { invoice ->
-                InvoiceItem(invoice = invoice)
+                // ✅ Podpięta nawigacja do szczegółów
+                InvoiceItem(
+                    invoice = invoice,
+                    onClick = {
+                        navController.navigate("invoice_details/${invoice.id}")
+                    }
+                )
             }
         }
     }
@@ -78,14 +77,14 @@ fun InvoiceDashboardScreen(
 
 @Composable
 fun RevenueCard(invoices: List<Invoice>, onDetailsClick: () -> Unit) {
-    var balanceVisible by rememberSaveable { mutableStateOf(false) } // Default to hidden
+    var balanceVisible by rememberSaveable { mutableStateOf(false) }
     val totalRevenue = invoices.sumOf { it.amount }
     val balanceText = if (balanceVisible) String.format("%,.2f", totalRevenue) else "•••••"
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        shape = RoundedCornerShape(16.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        shape = RoundedCornerShape(24.dp)
     ) {
         Column(
             modifier = Modifier
@@ -97,14 +96,13 @@ fun RevenueCard(invoices: List<Invoice>, onDetailsClick: () -> Unit) {
                         )
                     )
                 )
-                .padding(16.dp)
+                .padding(24.dp)
         ) {
             Text(
-                text = "Przychody",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onPrimary
+                text = "Całkowity Przychód",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
             )
-            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -124,24 +122,95 @@ fun RevenueCard(invoices: List<Invoice>, onDetailsClick: () -> Unit) {
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.clickable(onClick = onDetailsClick),
-                verticalAlignment = Alignment.CenterVertically
+            Spacer(modifier = Modifier.height(16.dp))
+            Surface(
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f),
+                shape = CircleShape,
+                modifier = Modifier.clickable { onDetailsClick() }
             ) {
-                Text(
-                    text = "Zobacz szczegóły",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Zobacz szczegóły",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(14.dp).padding(start = 4.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InvoiceItem(invoice: Invoice, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (invoice.isPaid) MaterialTheme.colorScheme.primaryContainer
+                        else MaterialTheme.colorScheme.errorContainer
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    imageVector = Icons.Default.Description,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(16.dp).padding(start = 4.dp)
+                    tint = if (invoice.isPaid) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(24.dp)
                 )
             }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (invoice.buyerName.isBlank()) "Nieznany Nabywca" else invoice.buyerName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "${String.format("%,.2f", invoice.amount)} PLN",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = if (invoice.isPaid) "Zapłacono" else "Oczekuje na płatność",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = if (invoice.isPaid) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.error
+                )
+            }
+
+            // ✅ Zamieniono ChevronRight na ArrowForward, który jest w standardowej bibliotece
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
@@ -157,43 +226,21 @@ private fun EmptyState() {
     ) {
         Icon(
             imageVector = Icons.Filled.ReceiptLong,
-            contentDescription = "Brak faktur",
+            contentDescription = null,
             modifier = Modifier.size(80.dp),
             tint = MaterialTheme.colorScheme.surfaceVariant
         )
         Text(
             text = "Brak faktur do wyświetlenia",
-            style = MaterialTheme.typography.titleMedium
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
         )
         Text(
             text = "Dodaj swoją pierwszą fakturę używając przycisku (+) na dole ekranu.",
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 32.dp)
         )
-    }
-}
-
-@Composable
-private fun InvoiceItem(invoice: Invoice) {
-    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Faktura dla: ${invoice.buyerName}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Kwota: ${String.format("%,.2f", invoice.amount)} PLN",
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Text(
-                text = if (invoice.isPaid) "Status: Zapłacono" else "Status: Oczekuje na płatność",
-                color = if (invoice.isPaid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
     }
 }

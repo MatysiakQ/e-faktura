@@ -20,9 +20,14 @@ interface InvoiceDao {
     @Delete
     suspend fun delete(invoice: Invoice)
 
+    // ✅ POPRAWKA: Zmiana nazwy na getInvoiceById i zmiana na suspend
+    // To bezpośrednio naprawi błąd "Unresolved reference" w Repository
     @Query("SELECT * FROM invoices WHERE id = :id")
-    fun getInvoice(id: String): Flow<Invoice>
+    suspend fun getInvoiceById(id: String): Invoice?
 
     @Query("SELECT * FROM invoices ORDER BY date DESC")
     fun getAllInvoices(): Flow<List<Invoice>>
+
+    @Query("DELETE FROM invoices")
+    suspend fun clearAll()
 }

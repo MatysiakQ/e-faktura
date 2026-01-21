@@ -34,6 +34,8 @@ import com.example.e_faktura.ui.core.SplashScreen
 import com.example.e_faktura.ui.dashboard.StatisticsScreen
 import com.example.e_faktura.ui.invoice.add.AddInvoiceScreen
 import com.example.e_faktura.ui.invoice.list.InvoiceDashboardScreen
+// ✅ Pamiętaj, aby stworzyć ten plik w ui.invoice.details
+import com.example.e_faktura.ui.invoice.details.InvoiceDetailsScreen
 import com.example.e_faktura.ui.navigation.Screen
 import com.example.e_faktura.ui.navigation.bottomNavItems
 import com.example.e_faktura.ui.theme.EfakturaTheme
@@ -75,9 +77,11 @@ fun AppScaffold(rootNavController: NavHostController) {
     val currentRoute = navBackStackEntry?.destination?.route
     val rootRoutes = remember { bottomNavItems.map { it.route } }
 
-    val isFullScreenRoute = currentRoute == Screen.AddCompany.route 
-        || currentRoute == Screen.AddInvoice.route 
-        || currentRoute?.startsWith("company_details/") == true
+    // ✅ AKTUALIZACJA: Dodano invoice_details do tras pełnoekranowych
+    val isFullScreenRoute = currentRoute == Screen.AddCompany.route
+            || currentRoute == Screen.AddInvoice.route
+            || currentRoute?.startsWith("company_details/") == true
+            || currentRoute?.startsWith("invoice_details/") == true
 
     val showGlobalBars = currentRoute in rootRoutes && !isFullScreenRoute
 
@@ -166,13 +170,26 @@ fun AppScaffold(rootNavController: NavHostController) {
                     navController.popBackStack()
                 })
             }
+
+            // --- Szczegóły Firmy ---
             composable(
                 route = "company_details/{companyId}",
                 arguments = listOf(navArgument("companyId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val companyId = backStackEntry.arguments?.getString("companyId")
-                Log.d("AppNavigation", "Navigating to details with ID: $companyId")
                 CompanyDetailsScreen(navController = navController)
+            }
+
+            // ✅ NOWOŚĆ: Szczegóły Faktury (To naprawi crash!)
+            composable(
+                route = "invoice_details/{invoiceId}",
+                arguments = listOf(navArgument("invoiceId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val invoiceId = backStackEntry.arguments?.getString("invoiceId")
+                InvoiceDetailsScreen(
+                    invoiceId = invoiceId,
+                    navController = navController
+                )
             }
         }
     }

@@ -85,7 +85,7 @@ private fun CompanyListItem(company: Company, onClick: () -> Unit) {
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = company.businessName,
+                    text = company.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )

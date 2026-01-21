@@ -11,11 +11,11 @@ import org.junit.Test
 class CompanyTest {
 
     @Test
-    fun `displayName for FIRM returns businessName when not null`() {
+    fun `displayName for FIRM returns name when not null`() {
         // Arrange
         val company = Company(
             type = CompanyType.FIRM,
-            businessName = "Test Corp",
+            name = "Test Corp",
             ownerFullName = "John Doe" // Should be ignored
         )
 
@@ -27,11 +27,11 @@ class CompanyTest {
     }
 
     @Test
-    fun `displayName for FIRM returns fallback when businessName is null`() {
+    fun `displayName for FIRM returns fallback when name is null`() {
         // Arrange
         val company = Company(
             type = CompanyType.FIRM,
-            businessName = null
+            name = null
         )
 
         // Act
@@ -46,7 +46,7 @@ class CompanyTest {
         // Arrange
         val company = Company(
             type = CompanyType.SOLE_PROPRIETORSHIP,
-            businessName = "Test Corp", // Should be ignored
+            name = "Test Corp", // Should be ignored
             ownerFullName = "Jane Doe"
         )
 

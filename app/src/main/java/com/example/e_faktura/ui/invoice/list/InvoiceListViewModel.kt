@@ -17,13 +17,14 @@ data class HomeUiState(
 )
 
 class InvoiceListViewModel(
-    invoiceRepository: InvoiceRepository,
-    companyRepository: CompanyRepository
+    private val invoiceRepository: InvoiceRepository,
+    private val companyRepository: CompanyRepository
 ) : ViewModel() {
 
     val uiState: StateFlow<HomeUiState> = combine(
         invoiceRepository.getInvoices(),
-        companyRepository.getCompanies()
+        // ✅ POPRAWKA: getAllCompaniesStream() pasuje do Twojego Repository
+        companyRepository.getAllCompaniesStream()
     ) { invoices, companies ->
         HomeUiState(invoices, companies)
     }.stateIn(

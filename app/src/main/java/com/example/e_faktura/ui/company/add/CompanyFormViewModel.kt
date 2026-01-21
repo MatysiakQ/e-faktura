@@ -5,126 +5,104 @@ import androidx.lifecycle.viewModelScope
 import com.example.e_faktura.data.repository.CompanyRepository
 import com.example.e_faktura.data.repository.GusRepository
 import com.example.e_faktura.model.Company
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.util.UUID
-
-data class CompanyFormState(
-    val id: String? = null,
-    val businessName: String = "",
-    val nip: String = "",
-    val address: String = "",
-    val postalCode: String = "",
-    val city: String = "",
-    val ownerFullName: String = "",
-    val bankAccount: String = "",
-    val icon: String = "PREDEFINED:Business",
-    val isLoading: Boolean = false,
-    val error: String? = null
-)
-
-sealed class UiEvent {
-    object SaveSuccess : UiEvent()
-    data class ShowError(val message: String) : UiEvent()
-}
 
 class CompanyFormViewModel(
     private val companyRepository: CompanyRepository,
     private val gusRepository: GusRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CompanyFormState())
-    val uiState: StateFlow<CompanyFormState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(CompanyUiState())
+    val uiState: StateFlow<CompanyUiState> = _uiState.asStateFlow()
 
-    private val _uiEvent = Channel<UiEvent>()
-    val uiEvent = _uiEvent.receiveAsFlow()
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent = _uiEvent.asSharedFlow()
 
-    fun loadCompany(companyId: String) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val company = companyRepository.getCompanyById(companyId)
-            if (company != null) {
-                _uiState.update {
-                    it.copy(
-                        id = company.id,
-                        businessName = company.businessName,
-                        nip = company.nip,
-                        address = company.address,
-                        postalCode = company.postalCode,
-                        city = company.city,
-                        ownerFullName = company.ownerFullName,
-                        bankAccount = company.bankAccount,
-                        icon = company.icon,
-                        isLoading = false
-                    )
-                }
-            } else {
-                _uiState.update { it.copy(isLoading = false, error = "Nie znaleziono firmy") }
-            }
-        }
+    // Aktualizacja NIP (tylko cyfry, max 10)
+    fun updateNip(input: String) {
+        val filtered = input.filter { it.isDigit() }.take(10)
+        _uiState.update { it.copy(nip = filtered, error = null) }
     }
 
-    fun updateName(name: String) = _uiState.update { it.copy(businessName = name) }
-    fun updateNip(nip: String) = _uiState.update { it.copy(nip = nip) }
+    // Kod pocztowy (XX-XXX)
+    fun updatePostalCode(input: String) {
+        val digits = input.filter { it.isDigit() }.take(5)
+        val formatted = if (digits.length > 2) "${digits.take(2)}-${digits.drop(2)}" else digits
+        _uiState.update { it.copy(postalCode = formatted, error = null) }
+    }
+
+    // Konto bankowe (spacje co 4 cyfry)
+    fun updateBankAccount(input: String) {
+        val digits = input.filter { it.isDigit() }.take(26)
+        val formatted = StringBuilder()
+        for (i in digits.indices) {
+            formatted.append(digits[i])
+            if (i == 1 || (i > 1 && (i - 1) % 4 == 0 && i < 25)) formatted.append(" ")
+        }
+        _uiState.update { it.copy(bankAccount = formatted.toString().trim(), error = null) }
+    }
+
+    fun updateName(name: String) = _uiState.update { it.copy(name = name, error = null) }
     fun updateAddress(address: String) = _uiState.update { it.copy(address = address) }
-    fun updatePostalCode(code: String) = _uiState.update { it.copy(postalCode = code) }
     fun updateCity(city: String) = _uiState.update { it.copy(city = city) }
     fun updateOwner(owner: String) = _uiState.update { it.copy(ownerFullName = owner) }
-    fun updateBankAccount(account: String) = _uiState.update { it.copy(bankAccount = account) }
     fun updateIcon(icon: String) = _uiState.update { it.copy(icon = icon) }
 
-    fun searchByNip() {
-        val nip = _uiState.value.nip
-        if (nip.length != 10) return
-
+    fun loadDataFromNip(nip: String) {
+        if (nip.length != 10) {
+            _uiState.update { it.copy(error = "NIP musi mieć 10 cyfr") }
+            return
+        }
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            val result = gusRepository.searchByNip(nip)
-            _uiState.update {
-                if (result != null) {
-                    it.copy(
-                        isLoading = false,
-                        businessName = result.name,
-                        address = result.address, // Note: GUS API might not split address details
-                        nip = result.nip
-                    )
+            try {
+                val data = gusRepository.searchByNip(nip)
+                if (data != null) {
+                    _uiState.update { it.copy(
+                        name = data.name,
+                        address = data.address,
+                        city = data.city,
+                        postalCode = data.postalCode,
+                        isLoading = false
+                    ) }
                 } else {
-                    it.copy(isLoading = false, error = "Nie znaleziono firmy w GUS dla podanego NIP.")
+                    _uiState.update { it.copy(isLoading = false, error = "Nie znaleziono firmy w bazie GUS") }
                 }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = "Błąd połączenia z bazą GUS") }
             }
         }
     }
 
     fun saveCompany() {
+        val s = uiState.value
+        val validationError = when {
+            s.nip.length != 10 -> "Podaj 10 cyfr NIP"
+            s.name.isBlank() -> "Podaj nazwę firmy"
+            else -> null
+        }
+
+        if (validationError != null) {
+            _uiState.update { it.copy(error = validationError) }
+            return
+        }
+
         viewModelScope.launch {
-            val state = _uiState.value
-            if (state.businessName.isBlank() || state.nip.isBlank()) {
-                _uiEvent.send(UiEvent.ShowError("Uzupełnij nazwę i NIP"))
-                return@launch
-            }
-
             _uiState.update { it.copy(isLoading = true) }
-
-            val company = Company(
-                id = state.id ?: UUID.randomUUID().toString(),
-                businessName = state.businessName,
-                nip = state.nip,
-                address = state.address,
-                postalCode = state.postalCode,
-                city = state.city,
-                ownerFullName = state.ownerFullName,
-                bankAccount = state.bankAccount,
-                icon = state.icon
-            )
-
-            companyRepository.insertCompany(company)
-            _uiState.update { it.copy(isLoading = false) }
-            _uiEvent.send(UiEvent.SaveSuccess)
+            try {
+                val newCompany = Company(
+                    id = s.id, nip = s.nip, name = s.name, address = s.address,
+                    postalCode = s.postalCode, city = s.city,
+                    ownerFullName = s.ownerFullName, bankAccount = s.bankAccount, icon = s.icon
+                )
+                companyRepository.insertCompany(newCompany)
+                _uiEvent.emit(UiEvent.SaveSuccess)
+            } catch (e: Exception) {
+                _uiEvent.emit(UiEvent.ShowError("Błąd zapisu: ${e.message}"))
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
+            }
         }
     }
 }

@@ -1,24 +1,20 @@
+// Plik: com/example/e_faktura/model/Company.kt
 package com.example.e_faktura.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.google.firebase.firestore.ServerTimestamp
-import java.util.Date
 
 @Entity(tableName = "companies")
 data class Company(
     @PrimaryKey
     val id: String = "",
-    val businessName: String = "",
     val nip: String = "",
+    val name: String = "",          // Musi być 'name', nie 'companyName'
     val address: String = "",
     val postalCode: String = "",
     val city: String = "",
     val ownerFullName: String = "",
     val bankAccount: String = "",
-    val icon: String = "PREDEFINED:Business",
-    val userId: String = "",
-
-    @ServerTimestamp
-    val createdAt: Date = Date()
+    val icon: String = "",
+    val userId: String = ""
 )
