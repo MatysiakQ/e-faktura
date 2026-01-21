@@ -3,7 +3,7 @@ package com.example.e_faktura.ui.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.e_faktura.data.repository.InvoiceRepository
-import com.example.e_faktura.model.Invoice
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -14,19 +14,21 @@ import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.TextStyle
 import java.util.Locale
+import javax.inject.Inject
 
 data class StatisticsUiState(
-    val revenue: Double = 0.0,
-    val costs: Double = 0.0,
-    val vatBalance: Double = 0.0,
-    val pendingAmount: Double = 0.0,
-    val overdueAmount: Double = 0.0,
+    val revenue: Double = 0.0,      // Przychód (Netto sprzedaż)
+    val costs: Double = 0.0,        // Koszty (Netto zakup)
+    val vatBalance: Double = 0.0,   // Bilans VAT (VAT Sprzedaż - VAT Zakup)
+    val pendingAmount: Double = 0.0,// Należności (Brutto nieopłacone)
+    val overdueAmount: Double = 0.0,// Przeterminowane (Brutto)
     val overdueCount: Int = 0,
     val currentMonth: String = "",
     val isLoading: Boolean = false
 )
 
-class StatisticsViewModel(
+@HiltViewModel
+class StatisticsViewModel @Inject constructor(
     invoiceRepository: InvoiceRepository
 ) : ViewModel() {
 
@@ -37,21 +39,47 @@ class StatisticsViewModel(
             val now = LocalDate.now()
             val currentMonth = YearMonth.from(now)
 
-            val monthInvoices = invoices.filter { 
-                val issueDate = Instant.ofEpochMilli(it.date).atZone(ZoneId.systemDefault()).toLocalDate()
-                YearMonth.from(issueDate) == currentMonth 
+            // 1. Filtrowanie po miesiącu
+            val monthInvoices = invoices.filter { invoice ->
+                val invoiceDate = try {
+                    Instant.ofEpochMilli(invoice.date).atZone(ZoneId.systemDefault()).toLocalDate()
+                } catch (e: Exception) { LocalDate.now() }
+                YearMonth.from(invoiceDate) == currentMonth
             }
 
+            // 2. Faktury nieopłacone i przeterminowane
             val pendingInvoices = invoices.filter { !it.isPaid }
-            val overdueInvoices = pendingInvoices.filter {
-                val dueDate = Instant.ofEpochMilli(it.dueDate).atZone(ZoneId.systemDefault()).toLocalDate()
+            val overdueInvoices = pendingInvoices.filter { invoice ->
+                val dueDate = try {
+                    Instant.ofEpochMilli(invoice.dueDate).atZone(ZoneId.systemDefault()).toLocalDate()
+                } catch (e: Exception) { LocalDate.MAX }
                 dueDate.isBefore(now)
             }
 
-            val revenue = monthInvoices.filter { it.type == "SALE" }.sumOf { it.amount }
-            val costs = monthInvoices.filter { it.type == "COST" }.sumOf { it.amount }
-            val vatBalance = (revenue * 0.23) - (costs * 0.23) // Simplified VAT
+            // 3. Obliczenia Finansowe (Core logic)
+            // Przychód to suma NETTO ze sprzedaży
+            val revenue = monthInvoices
+                .filter { it.type == "SALE" }
+                .sumOf { it.netValue }
 
+            // Koszty to suma NETTO z zakupów
+            val costs = monthInvoices
+                .filter { it.type == "PURCHASE" }
+                .sumOf { it.netValue }
+
+            // VAT Należny (ze sprzedaży)
+            val vatSales = monthInvoices
+                .filter { it.type == "SALE" }
+                .sumOf { it.vatValue }
+
+            // VAT Naliczony (z zakupów)
+            val vatPurchases = monthInvoices
+                .filter { it.type == "PURCHASE" }
+                .sumOf { it.vatValue }
+
+            val vatBalance = vatSales - vatPurchases
+
+            // Nazwa miesiąca
             val monthDisplayName = currentMonth.month.getDisplayName(TextStyle.FULL_STANDALONE, polishLocale)
                 .replaceFirstChar { if (it.isLowerCase()) it.titlecase(polishLocale) else it.toString() }
 
@@ -59,10 +87,11 @@ class StatisticsViewModel(
                 revenue = revenue,
                 costs = costs,
                 vatBalance = vatBalance,
-                pendingAmount = pendingInvoices.sumOf { it.amount },
-                overdueAmount = overdueInvoices.sumOf { it.amount },
+                pendingAmount = pendingInvoices.sumOf { it.grossValue }, // Płatności zawsze w brutto
+                overdueAmount = overdueInvoices.sumOf { it.grossValue },
                 overdueCount = overdueInvoices.size,
-                currentMonth = "$monthDisplayName ${currentMonth.year}"
+                currentMonth = "$monthDisplayName ${currentMonth.year}",
+                isLoading = false
             )
         }
         .stateIn(

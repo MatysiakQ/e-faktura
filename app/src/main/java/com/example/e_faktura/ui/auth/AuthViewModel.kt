@@ -9,6 +9,7 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.auth.ktx.userProfileChangeRequest
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
 
 data class AuthUiState(
     val isLoading: Boolean = false,
@@ -28,7 +30,8 @@ data class AuthUiState(
     val profileUpdateSuccess: Boolean = false
 )
 
-class AuthViewModel : ViewModel() {
+@HiltViewModel
+class AuthViewModel @Inject constructor() : ViewModel() {
 
     private val auth: FirebaseAuth = Firebase.auth
     private val storage = Firebase.storage
@@ -36,6 +39,7 @@ class AuthViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
+    // Flow obserwujący aktualnego użytkownika
     val user: StateFlow<FirebaseUser?> = callbackFlow {
         val listener = FirebaseAuth.AuthStateListener { auth -> trySend(auth.currentUser) }
         auth.addAuthStateListener(listener)
@@ -46,6 +50,7 @@ class AuthViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
+                // await() sprawia, że czekamy na wynik, jeśli się nie uda, rzuci wyjątek
                 auth.signInWithEmailAndPassword(email, pass).await()
                 _uiState.update { it.copy(isLoading = false, isLoginSuccess = true) }
             } catch (e: Exception) {
@@ -64,46 +69,51 @@ class AuthViewModel : ViewModel() {
             }
         }
     }
-    
+
     fun changePassword(newPass: String) {
         viewModelScope.launch {
-            val currentUser = auth.currentUser ?: return@launch
+            val currentUser = auth.currentUser
+            if (currentUser == null) {
+                _uiState.update { it.copy(error = "Użytkownik nie jest zalogowany") }
+                return@launch
+            }
+
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 currentUser.updatePassword(newPass).await()
                 _uiState.update { it.copy(isLoading = false, passwordChangeSuccess = true) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Błąd podczas zmiany hasła.") }
+                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Błąd zmiany hasła") }
             }
         }
     }
 
     fun updateProfilePicture(uri: Uri?) {
         viewModelScope.launch {
-            val currentUser = auth.currentUser ?: return@launch
-            if (uri == null) return@launch
+            val currentUser = auth.currentUser
+            if (currentUser == null || uri == null) return@launch
 
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val storageRef = storage.reference.child("profile_pictures/${currentUser.uid}")
                 val downloadUrl = storageRef.putFile(uri).await().storage.downloadUrl.await()
+
                 val profileUpdates = userProfileChangeRequest { photoUri = downloadUrl }
                 currentUser.updateProfile(profileUpdates).await()
+
                 _uiState.update { it.copy(isLoading = false, profileUpdateSuccess = true) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Błąd podczas przesyłania zdjęcia.") }
+                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Błąd wysyłania zdjęcia") }
             }
         }
     }
 
     fun logout() {
         auth.signOut()
-        viewModelScope.launch {
-            auth.signInAnonymously()
-        }
     }
 
+    // --- ZMIANA NAZWY Z resetState NA resetAuthState ---
     fun resetAuthState() {
-        _uiState.value = AuthUiState()
+        _uiState.update { AuthUiState() }
     }
 }
