@@ -1,11 +1,15 @@
 package com.example.e_faktura.data.api
 
-import com.example.e_faktura.model.GusData
+import com.example.e_faktura.model.GusResponse
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface GusService {
-    // Ścieżka zależy od Twojego konkretnego API GUS/REGON
-    @GET("api/query/nip")
-    suspend fun getCompanyData(@Query("nip") nip: String): GusData
+    // Oficjalne zapytanie do Białej Listy MF
+    @GET("api/search/nip/{nip}")
+    suspend fun getCompanyData(
+        @Path("nip") nip: String,
+        @Query("date") date: String // format yyyy-MM-dd
+    ): GusResponse
 }

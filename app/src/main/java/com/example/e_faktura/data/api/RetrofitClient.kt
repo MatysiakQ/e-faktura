@@ -4,8 +4,8 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
-    // Adres API do pobierania danych z GUS
-    private const val BASE_URL = "https://twoje-api-gus.pl/"
+    // ✅ Oficjalne API Ministerstwa Finansów (Biała Lista)
+    private const val BASE_URL = "https://wl-api.mf.gov.pl/"
 
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
@@ -14,7 +14,6 @@ object RetrofitClient {
             .build()
     }
 
-    // ✅ To jest serwis, o który wołał AppContainer
     val gusService: GusService by lazy {
         retrofit.create(GusService::class.java)
     }
