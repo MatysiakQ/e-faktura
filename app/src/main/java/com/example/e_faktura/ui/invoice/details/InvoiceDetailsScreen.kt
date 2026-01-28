@@ -14,7 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -29,37 +28,28 @@ import java.util.*
 fun InvoiceDetailsScreen(
     invoiceId: String?,
     navController: NavController,
-    // ✅ Korzystamy z naszej ręcznej fabryki bez Hilta
     viewModel: InvoiceDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    // ✅ Inicjalizacja ładowania faktury po wejściu na ekran
     LaunchedEffect(invoiceId) {
-        if (invoiceId != null) {
-            viewModel.loadInvoice(invoiceId)
-        }
+        if (invoiceId != null) viewModel.loadInvoice(invoiceId)
     }
 
-    // Dialog potwierdzenia usunięcia
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Usuń fakturę") },
-            text = { Text("Czy na pewno chcesz trwale usunąć tę fakturę?") },
+            text = { Text("Czy na pewno chcesz usunąć tę fakturę?") },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false
                     viewModel.deleteInvoice { navController.popBackStack() }
-                }) {
-                    Text("Usuń", color = MaterialTheme.colorScheme.error)
-                }
+                }) { Text("Usuń", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Anuluj") }
-            }
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Anuluj") } }
         )
     }
 
@@ -69,143 +59,71 @@ fun InvoiceDetailsScreen(
                 title = { Text("Szczegóły faktury", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Wróć")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Wróć")
                     }
                 },
                 actions = {
                     IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Usuń",
-                            tint = MaterialTheme.colorScheme.error
-                        )
+                        Icon(Icons.Default.Delete, "Usuń", tint = MaterialTheme.colorScheme.error)
                     }
                 }
             )
         }
-    ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            when {
-                uiState.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                uiState.error != null -> Text(
-                    text = "Błąd: ${uiState.error}",
-                    modifier = Modifier.align(Alignment.Center),
-                    color = MaterialTheme.colorScheme.error
-                )
-                uiState.invoice != null -> {
-                    val invoice = uiState.invoice!!
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                            .verticalScroll(rememberScrollState()),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        // KARTA PODSUMOWANIA PŁATNOŚCI
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(28.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (invoice.isPaid) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
-                                else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
-                            )
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(24.dp).fillMaxWidth(),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = "KWOTA DO ZAPŁATY",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = "${String.format("%,.2f", invoice.amount)} PLN",
-                                    fontSize = 36.sp,
-                                    fontWeight = FontWeight.ExtraBold
-                                )
-
-                                Spacer(Modifier.height(16.dp))
-
-                                Button(
-                                    onClick = { viewModel.togglePaidStatus() },
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (invoice.isPaid) MaterialTheme.colorScheme.error
-                                        else MaterialTheme.colorScheme.primary
-                                    )
-                                ) {
-                                    Icon(if (invoice.isPaid) Icons.Default.Close else Icons.Default.Check, null)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(if (invoice.isPaid) "OZNACZ JAKO NIEOPŁACONĄ" else "OZNACZ JAKO OPŁACONĄ")
-                                }
-                            }
-                        }
-
-                        Spacer(Modifier.height(24.dp))
-
-                        // SEKCJA: DANE FAKTURY
-                        InfoSection(title = "DANE FAKTURY") {
-                            // ✅ Używamy invoiceNumber zamiast number
-                            DetailRow(Icons.Default.Numbers, "Numer", invoice.invoiceNumber)
-                            // ✅ Używamy dueDate dla daty płatności
-                            DetailRow(Icons.Default.Event, "Termin płatności", formatDate(invoice.dueDate))
-                        }
-
+    ) { padding ->
+        val invoice = uiState.invoice
+        if (invoice != null) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp).verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // KARTA KWOTY
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f))
+                ) {
+                    Column(Modifier.padding(24.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("${String.format("%.2f", invoice.amount)} PLN", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
                         Spacer(Modifier.height(16.dp))
-
-                        // SEKCJA: NABYWCA
-                        InfoSection(title = "NABYWCA") {
-                            DetailRow(Icons.Default.Business, "Nazwa", invoice.buyerName)
-                            // ✅ buyerNip jest teraz dostępny w modelu
-                            DetailRow(Icons.Default.Badge, "NIP", invoice.buyerNip)
-                        }
-
-                        Spacer(Modifier.height(32.dp))
-
-                        // PRZYCISK GENEROWANIA PDF
-                        Button(
-                            onClick = {
-                                // ✅ Wywołanie generatora PDF
-                                PdfInvoiceGenerator.generateAndOpenPdf(context, invoice)
-                            },
-                            modifier = Modifier.fillMaxWidth().height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        ) {
-                            Icon(Icons.Default.PictureAsPdf, null)
+                        Button(onClick = { viewModel.togglePaidStatus() }) {
+                            Icon(if (invoice.isPaid) Icons.Default.Close else Icons.Default.Check, null)
                             Spacer(Modifier.width(8.dp))
-                            Text("GENERUJ I OTWÓRZ PDF", fontWeight = FontWeight.Bold)
+                            Text(if (invoice.isPaid) "NIEOPŁACONA" else "OPŁACONA")
                         }
                     }
                 }
+
+                Spacer(Modifier.height(24.dp))
+
+                InfoSection(title = "DANE FAKTURY") {
+                    DetailRow(Icons.Default.Numbers, "Numer", invoice.invoiceNumber)
+                    DetailRow(Icons.Default.Event, "Termin", SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(invoice.dueDate)))
+                }
+
+                InfoSection(title = "NABYWCA") {
+                    DetailRow(Icons.Default.Business, "Nazwa", invoice.buyerName)
+                    DetailRow(Icons.Default.Badge, "NIP", invoice.buyerNip)
+                }
+
+                Spacer(Modifier.height(32.dp))
+
+                Button(
+                    onClick = { PdfInvoiceGenerator.generateAndOpenPdf(context, invoice) },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Default.PictureAsPdf, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("POBIERZ PDF", fontWeight = FontWeight.Bold)
+                }
             }
+        } else if (uiState.isLoading) {
+            Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
         }
     }
 }
 
-@Composable
-fun InfoSection(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
-        )
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-        ) {
-            Column(modifier = Modifier.padding(20.dp)) { content() }
-        }
-    }
-}
-
+// ✅ ROZWIĄZANIE BŁĘDU: Ta funkcja musi tu być!
 @Composable
 fun DetailRow(icon: ImageVector, label: String, value: String) {
     Row(modifier = Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -213,14 +131,17 @@ fun DetailRow(icon: ImageVector, label: String, value: String) {
         Spacer(Modifier.width(16.dp))
         Column {
             Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(
-                text = if (value.isBlank()) "Brak danych" else value,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
+            Text(text = value.ifBlank { "Brak danych" }, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
         }
     }
 }
 
-fun formatDate(timestamp: Long): String =
-    SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(timestamp))
+@Composable
+fun InfoSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        Card(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+            Column(modifier = Modifier.padding(16.dp)) { content() }
+        }
+    }
+}

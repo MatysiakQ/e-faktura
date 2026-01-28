@@ -59,15 +59,23 @@ class InvoiceRepository(
 
     suspend fun addInvoice(invoice: Invoice) {
         val currentUserId = userId
-        // ✅ NAPRAWIONO: 'userId' zamiast 'sellerId'
-        val invoiceWithUser = if (currentUserId != null) invoice.copy(userId = currentUserId) else invoice
+        val currentTime = System.currentTimeMillis()
 
-        // ✅ NAPRAWIONO: 'insertInvoice' zamiast 'insert'
-        invoiceDao.insertInvoice(invoiceWithUser)
+        // ✅ OBLICZENIE: 14 dni w milisekundach (14 * 24 * 60 * 60 * 1000)
+        val twoWeeksInMs = 1_209_600_000L
+        val automaticDueDate = currentTime + twoWeeksInMs
+
+        val finalInvoice = invoice.copy(
+            userId = currentUserId ?: "",
+            dueDate = automaticDueDate, // Automatyczny termin
+            isPaid = false
+        )
+
+        invoiceDao.insertInvoice(finalInvoice)
 
         if (currentUserId != null) {
             firestore.collection("users").document(currentUserId)
-                .collection("invoices").document(invoice.id).set(invoiceWithUser).await()
+                .collection("invoices").document(finalInvoice.id).set(finalInvoice).await()
         }
     }
 

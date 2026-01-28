@@ -1,61 +1,94 @@
 package com.example.e_faktura.ui.auth
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel // ✅ ZMIENIONO
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.e_faktura.ui.AppViewModelProvider // ✅ DODANO
+import com.example.e_faktura.ui.AppViewModelProvider
+import com.example.e_faktura.ui.navigation.Screen
 
 @Composable
 fun LoginScreen(
     navController: NavController,
-    // ✅ UŻYWAMY RĘCZNEJ FABRYKI
     viewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf<String>("") }
+    var password by remember { mutableStateOf<String>("") }
+    val state by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(uiState.isLoginSuccess) {
-        if (uiState.isLoginSuccess) {
-            navController.navigate("dashboard") {
-                popUpTo("login") { inclusive = true }
+    // Reakcja na sukces logowania
+    LaunchedEffect(state.isLoginSuccess) {
+        if (state.isLoginSuccess) {
+            // ✅ POPRAWKA: Wchodzimy do głównego kontenera aplikacji zamiast do "home"
+            navController.navigate(Screen.MainApp.route) {
+                popUpTo(Screen.Login.route) { inclusive = true }
             }
-            viewModel.resetAuthState()
-        }
-    }
-
-    LaunchedEffect(uiState.error) {
-        uiState.error?.let {
-            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
         }
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        if (uiState.isLoading) CircularProgressIndicator()
+        Text("Witaj w e-Faktura", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(32.dp))
 
-        TextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
-        Spacer(modifier = Modifier.height(8.dp))
-        TextField(value = password, onValueChange = { password = it }, label = { Text("Hasło") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { viewModel.login(email, password) }, modifier = Modifier.fillMaxWidth()) {
-            Text("Zaloguj się")
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email") },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !state.isLoading
+        )
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Hasło") },
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !state.isLoading
+        )
+
+        if (state.error != null) {
+            Text(text = state.error!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
         }
-        TextButton(onClick = { navController.navigate("register") }) {
+
+        Spacer(Modifier.height(24.dp))
+
+        if (state.isLoading) {
+            CircularProgressIndicator()
+        } else {
+            Button(onClick = { viewModel.login(email, password) }, modifier = Modifier.fillMaxWidth().height(50.dp)) {
+                Text("Zaloguj się")
+            }
+        }
+
+        TextButton(onClick = { navController.navigate(Screen.Register.route) }) {
             Text("Nie masz konta? Zarejestruj się")
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+        // ✅ NAPRAWIONO: Przycisk gościa teraz poprawnie otwiera aplikację
+        OutlinedButton(
+            onClick = {
+                navController.navigate(Screen.MainApp.route) {
+                    popUpTo(Screen.Login.route) { inclusive = true }
+                }
+            },
+            modifier = Modifier.fillMaxWidth().height(50.dp)
+        ) {
+            Text("KONTYNUUJ JAKO GOŚĆ")
         }
     }
 }

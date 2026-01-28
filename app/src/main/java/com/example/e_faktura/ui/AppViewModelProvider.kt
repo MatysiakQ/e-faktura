@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.e_faktura.EfakturaApplication
 import com.example.e_faktura.ui.auth.AuthViewModel
 import com.example.e_faktura.ui.company.add.CompanyFormViewModel
+import com.example.e_faktura.ui.company.details.CompanyDetailsViewModel
 import com.example.e_faktura.ui.company.list.CompanyListViewModel
 import com.example.e_faktura.ui.dashboard.StatisticsViewModel
 import com.example.e_faktura.ui.invoice.add.InvoiceViewModel
@@ -15,8 +16,7 @@ import com.example.e_faktura.ui.invoice.details.InvoiceDetailsViewModel
 import com.example.e_faktura.ui.invoice.list.InvoiceListViewModel
 
 /**
- * Dostarcza fabrykę do tworzenia wszystkich ViewModeli w aplikacji.
- * Eliminuje potrzebę korzystania z biblioteki Hilt.
+ * Fabryka dostarczająca zależności do wszystkich ViewModeli.
  */
 object AppViewModelProvider {
     val Factory = viewModelFactory {
@@ -30,7 +30,7 @@ object AppViewModelProvider {
             )
         }
 
-        // Formularz Dodawania/Edycji Firmy
+        // Formularz firmy (GUS)
         initializer {
             CompanyFormViewModel(
                 companyRepository = efakturaApplication().container.companyRepository,
@@ -38,14 +38,22 @@ object AppViewModelProvider {
             )
         }
 
-        // Lista Firm
+        // Lista firm
         initializer {
             CompanyListViewModel(
                 companyRepository = efakturaApplication().container.companyRepository
             )
         }
 
-        // Lista Faktur
+        // ✅ Szczegóły firmy - pobiera ID z trasy nawigacji
+        initializer {
+            CompanyDetailsViewModel(
+                savedStateHandle = this.createSavedStateHandle(),
+                companyRepository = efakturaApplication().container.companyRepository
+            )
+        }
+
+        // Lista faktur
         initializer {
             InvoiceListViewModel(
                 invoiceRepository = efakturaApplication().container.invoiceRepository,
@@ -53,7 +61,7 @@ object AppViewModelProvider {
             )
         }
 
-        // Szczegóły Faktury - wymaga SavedStateHandle do odczytu ID z URL
+        // Szczegóły faktury - pobiera ID z trasy nawigacji
         initializer {
             InvoiceDetailsViewModel(
                 savedStateHandle = this.createSavedStateHandle(),
@@ -61,7 +69,7 @@ object AppViewModelProvider {
             )
         }
 
-        // Dodawanie Faktury
+        // Dodawanie nowej faktury
         initializer {
             InvoiceViewModel(
                 invoiceRepository = efakturaApplication().container.invoiceRepository,
@@ -73,7 +81,7 @@ object AppViewModelProvider {
 }
 
 /**
- * Rozszerzenie ułatwiające dostęp do instancji aplikacji i kontenera danych.
+ * Pomocnik do wyciągania instancji aplikacji.
  */
 fun CreationExtras.efakturaApplication(): EfakturaApplication =
     (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as EfakturaApplication)

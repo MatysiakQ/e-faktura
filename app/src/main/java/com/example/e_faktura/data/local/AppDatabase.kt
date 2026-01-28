@@ -8,8 +8,8 @@ import androidx.room.TypeConverters
 import com.example.e_faktura.model.Company
 import com.example.e_faktura.model.Invoice
 
-// ✅ Wersja 3 jest poprawna, jeśli poprzednia to 2.
-@Database(entities = [Company::class, Invoice::class], version = 4, exportSchema = false)
+
+@Database(entities = [Company::class, Invoice::class], version = 6, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun companyDao(): CompanyDao

@@ -1,74 +1,51 @@
 package com.example.e_faktura
 
+// ✅ DODANO: Importy modelu i enuma
+import com.example.e_faktura.model.Company
+import com.example.e_faktura.model.CompanyType
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
  * Unit tests for the Company data class.
- * This test class verifies the correctness of the business logic within the Company model,
- * specifically focusing on the `displayName` computed property.
  */
 class CompanyTest {
 
     @Test
     fun `displayName for FIRM returns name when not null`() {
-        // Arrange
         val company = Company(
             type = CompanyType.FIRM,
             name = "Test Corp",
-            ownerFullName = "John Doe" // Should be ignored
+            ownerFullName = "John Doe"
         )
-
-        // Act
-        val displayName = company.displayName
-
-        // Assert
-        assertEquals("Test Corp", displayName)
+        assertEquals("Test Corp", company.displayName)
     }
 
     @Test
     fun `displayName for FIRM returns fallback when name is null`() {
-        // Arrange
         val company = Company(
             type = CompanyType.FIRM,
             name = null
         )
-
-        // Act
-        val displayName = company.displayName
-
-        // Assert
-        assertEquals("Brak nazwy", displayName)
+        assertEquals("Brak nazwy", company.displayName)
     }
 
     @Test
     fun `displayName for SOLE_PROPRIETORSHIP returns ownerFullName when not null`() {
-        // Arrange
         val company = Company(
             type = CompanyType.SOLE_PROPRIETORSHIP,
-            name = "Test Corp", // Should be ignored
+            name = "Test Corp",
             ownerFullName = "Jane Doe"
         )
-
-        // Act
-        val displayName = company.displayName
-
-        // Assert
-        assertEquals("Jane Doe", displayName)
+        assertEquals("Jane Doe", company.displayName)
     }
 
     @Test
     fun `displayName for SOLE_PROPRIETORSHIP returns fallback when ownerFullName is null`() {
-        // Arrange
         val company = Company(
             type = CompanyType.SOLE_PROPRIETORSHIP,
             ownerFullName = null
         )
-
-        // Act
-        val displayName = company.displayName
-
-        // Assert
-        assertEquals("Brak nazwy", displayName)
+        assertEquals("Brak nazwy", company.displayName)
     }
 }

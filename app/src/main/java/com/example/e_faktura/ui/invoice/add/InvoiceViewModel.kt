@@ -9,14 +9,15 @@ import com.example.e_faktura.model.Company
 import com.example.e_faktura.model.Invoice
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat // ✅ DODANO
-import java.util.* // ✅ DODANO
+import java.text.SimpleDateFormat
+import java.util.*
 
 data class InvoiceUiState(
     val buyerName: String = "",
     val buyerNip: String = "",
     val amount: String = "",
     val invoiceNumber: String = "",
+    val type: String = "PRZYCHOD", // ✅ DODANO: Domyślny typ to Przychód
     val isSaving: Boolean = false,
     val isLoadingGus: Boolean = false,
     val error: String? = null
@@ -34,7 +35,6 @@ class InvoiceViewModel(
     val savedCompanies: StateFlow<List<Company>> = companyRepository.getAllCompaniesStream()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // ✅ DODANO: Automatyczne numerowanie przy otwarciu formularza
     init {
         val datePart = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(Date())
         val randomPart = (10..99).random()
@@ -45,9 +45,16 @@ class InvoiceViewModel(
     fun updateBuyerNip(nip: String) { _uiState.update { it.copy(buyerNip = nip, error = null) } }
     fun updateAmount(amount: String) { _uiState.update { it.copy(amount = amount) } }
     fun updateNumber(number: String) { _uiState.update { it.copy(invoiceNumber = number, error = null) } }
+    // ✅ DODANO: Metoda aktualizacji typu
+    fun updateType(type: String) { _uiState.update { it.copy(type = type) } }
 
     fun selectCompany(company: Company) {
-        _uiState.update { it.copy(buyerName = company.name, buyerNip = company.nip) }
+        _uiState.update {
+            it.copy(
+                buyerName = company.displayName,
+                buyerNip = company.nip
+            )
+        }
     }
 
     fun fetchCompanyFromGus() {
@@ -62,7 +69,7 @@ class InvoiceViewModel(
             try {
                 val data = gusRepository.searchByNip(nip)
                 if (data != null) {
-                    _uiState.update { it.copy(buyerName = data.name, isLoadingGus = false) }
+                    _uiState.update { it.copy(buyerName = data.name ?: "", isLoadingGus = false) }
                 } else {
                     _uiState.update { it.copy(error = "Nie znaleziono firmy w GUS", isLoadingGus = false) }
                 }
@@ -73,7 +80,6 @@ class InvoiceViewModel(
     }
 
     fun saveInvoice(onInvoiceAdded: () -> Unit) {
-        // ✅ DODANO: Walidacja numeru faktury
         if (_uiState.value.invoiceNumber.isBlank()) {
             _uiState.update { it.copy(error = "Podaj numer faktury") }
             return
@@ -84,7 +90,8 @@ class InvoiceViewModel(
             try {
                 val invoice = Invoice(
                     id = UUID.randomUUID().toString(),
-                    invoiceNumber = _uiState.value.invoiceNumber, // Pobieramy ze stanu
+                    invoiceNumber = _uiState.value.invoiceNumber,
+                    type = _uiState.value.type, // ✅ Zapisujemy wybrany typ
                     buyerName = _uiState.value.buyerName,
                     buyerNip = _uiState.value.buyerNip,
                     amount = _uiState.value.amount.toDoubleOrNull() ?: 0.0,

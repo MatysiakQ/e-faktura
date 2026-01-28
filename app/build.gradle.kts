@@ -112,4 +112,5 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4) // ✅ Poprawione
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest) // ✅ Poprawione (tu był błąd 'manifest')
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 }

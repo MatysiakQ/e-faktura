@@ -10,13 +10,7 @@ import com.google.firebase.auth.ktx.userProfileChangeRequest
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -25,10 +19,10 @@ data class AuthUiState(
     val error: String? = null,
     val isLoginSuccess: Boolean = false,
     val passwordChangeSuccess: Boolean = false,
-    val profileUpdateSuccess: Boolean = false
+    val profileUpdateSuccess: Boolean = false,
+    val emailChangeSuccess: Boolean = false // ✅ DODANO: Status zmiany email
 )
 
-// ✅ USUNIĘTO HILTA
 class AuthViewModel : ViewModel() {
 
     private val auth: FirebaseAuth = Firebase.auth
@@ -50,18 +44,37 @@ class AuthViewModel : ViewModel() {
                 auth.signInWithEmailAndPassword(email, pass).await()
                 _uiState.update { it.copy(isLoading = false, isLoginSuccess = true) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Błąd logowania") }
+                _uiState.update { it.copy(isLoading = false, error = "Błędny e-mail lub hasło") }
             }
         }
     }
 
-    fun register(email: String, pass: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    fun register(email: String, pass: String, username: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                auth.createUserWithEmailAndPassword(email, pass).await()
+                val result = auth.createUserWithEmailAndPassword(email, pass).await()
+                val profileUpdates = userProfileChangeRequest { displayName = username }
+                result.user?.updateProfile(profileUpdates)?.await()
+                _uiState.update { it.copy(isLoading = false) }
                 onSuccess()
             } catch (e: Exception) {
-                onError(e.message ?: "Błąd rejestracji")
+                _uiState.update { it.copy(isLoading = false) }
+                onError(e.localizedMessage ?: "Błąd rejestracji")
+            }
+        }
+    }
+
+    // ✅ DODANO: Metoda zmiany adresu e-mail
+    fun changeEmail(newEmail: String) {
+        viewModelScope.launch {
+            val currentUser = auth.currentUser ?: return@launch
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            try {
+                currentUser.updateEmail(newEmail).await()
+                _uiState.update { it.copy(isLoading = false, emailChangeSuccess = true) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = e.localizedMessage) }
             }
         }
     }
@@ -74,7 +87,7 @@ class AuthViewModel : ViewModel() {
                 currentUser.updatePassword(newPass).await()
                 _uiState.update { it.copy(isLoading = false, passwordChangeSuccess = true) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Błąd zmiany hasła") }
+                _uiState.update { it.copy(isLoading = false, error = e.localizedMessage) }
             }
         }
     }
@@ -83,7 +96,6 @@ class AuthViewModel : ViewModel() {
         viewModelScope.launch {
             val currentUser = auth.currentUser ?: return@launch
             if (uri == null) return@launch
-
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val storageRef = storage.reference.child("profile_pictures/${currentUser.uid}")
@@ -92,16 +104,24 @@ class AuthViewModel : ViewModel() {
                 currentUser.updateProfile(profileUpdates).await()
                 _uiState.update { it.copy(isLoading = false, profileUpdateSuccess = true) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Błąd wysyłania zdjęcia") }
+                _uiState.update { it.copy(isLoading = false, error = e.localizedMessage) }
             }
         }
     }
 
     fun logout() {
         auth.signOut()
+        _uiState.value = AuthUiState()
     }
 
     fun resetAuthState() {
-        _uiState.update { AuthUiState() }
+        _uiState.update {
+            it.copy(
+                passwordChangeSuccess = false,
+                profileUpdateSuccess = false,
+                emailChangeSuccess = false, // ✅ Zresetuj status
+                error = null
+            )
+        }
     }
 }

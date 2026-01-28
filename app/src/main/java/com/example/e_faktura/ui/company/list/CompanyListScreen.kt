@@ -5,7 +5,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items // ✅ Upewnij się, że to ten import
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -39,8 +39,8 @@ fun CompanyListScreen(
             uiState.isLoading -> {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
-            // ✅ Zmieniono na companies, aby było spójne ze stanem ViewModelu
             uiState.companies.isEmpty() -> {
+                // ✅ Zapewniono stały String
                 Text(
                     text = "Brak firm. Dodaj nową.",
                     modifier = Modifier.align(Alignment.Center),
@@ -53,7 +53,6 @@ fun CompanyListScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // ✅ Poprawiona składnia items, aby uniknąć błędu 'Argument type mismatch'
                     items(items = uiState.companies, key = { company -> company.id }) { company ->
                         CompanyListItem(company = company) {
                             navController.navigate("company_details/${company.id}")
@@ -90,8 +89,9 @@ private fun CompanyListItem(company: Company, onClick: () -> Unit) {
             CompanyAvatar(iconString = company.icon)
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
+                // ✅ POPRAWKA: displayName zamiast name (rozwiązuje błąd kompilacji)
                 Text(
-                    text = company.name,
+                    text = company.displayName,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -108,9 +108,7 @@ private fun CompanyListItem(company: Company, onClick: () -> Unit) {
 @Composable
 private fun CompanyAvatar(iconString: String) {
     Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape),
+        modifier = Modifier.size(48.dp).clip(CircleShape),
         contentAlignment = Alignment.Center
     ) {
         val parts = iconString.split(":")

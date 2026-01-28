@@ -3,6 +3,7 @@ package com.example.e_faktura.ui.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.e_faktura.data.repository.InvoiceRepository
+import com.example.e_faktura.model.Invoice
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -39,10 +40,16 @@ class StatisticsViewModel(
                 val now = LocalDate.now()
                 val monthName = now.month.getDisplayName(TextStyle.FULL, Locale("pl"))
 
-                val rev = invoices.filter { it.type == "PRZYCHOD" }.sumOf { it.amount }
+                // ✅ POPRAWKA: Przychód (Revenue) liczymy TYLKO z OPŁACONYCH faktur
+                val rev = invoices.filter { it.type == "PRZYCHOD" && it.isPaid }.sumOf { it.amount }
+
+                // ✅ Koszty (KOSZT) - tutaj zazwyczaj liczy się wszystkie, aby widzieć zobowiązania
                 val cst = invoices.filter { it.type == "KOSZT" }.sumOf { it.amount }
 
-                // ✅ NAPRAWIONO: Konwersja Long (timestamp) na LocalDate
+                // ✅ Oczekujące (Pending) - sumujemy TYLKO NIEOPŁACONE faktury przychodowe
+                val pending = invoices.filter { it.type == "PRZYCHOD" && !it.isPaid }.sumOf { it.amount }
+
+                // Filtrowanie przedawnionych (nieopłacone i po terminie)
                 val overdue = invoices.filter { invoice ->
                     if (invoice.isPaid) return@filter false
 
@@ -57,8 +64,9 @@ class StatisticsViewModel(
                     it.copy(
                         revenue = rev,
                         costs = cst,
+                        // Bilans VAT liczony od zrealizowanego przychodu i kosztów
                         vatBalance = (rev - cst) * 0.23,
-                        pendingAmount = invoices.filter { !it.isPaid }.sumOf { it.amount },
+                        pendingAmount = pending, // Teraz 20k trafi tutaj, a nie do revenue
                         overdueCount = overdue.size,
                         overdueAmount = overdue.sumOf { it.amount },
                         currentMonth = "$monthName ${now.year}",

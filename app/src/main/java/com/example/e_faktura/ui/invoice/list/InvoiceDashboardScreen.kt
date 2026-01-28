@@ -25,19 +25,19 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.e_faktura.model.Invoice
+import com.example.e_faktura.model.InvoiceStatus
+import com.example.e_faktura.model.getStatus
 import com.example.e_faktura.ui.AppViewModelProvider
 import com.example.e_faktura.ui.navigation.Screen
 
 @Composable
 fun InvoiceDashboardScreen(
     navController: NavController,
-    // Korzystamy z fabryki, którą zdefiniowaliśmy wcześniej
     invoiceViewModel: InvoiceListViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by invoiceViewModel.uiState.collectAsState()
     val invoices = uiState.invoices
 
-    // ✅ DODANO: Obsługa stanu ładowania
     if (uiState.isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
@@ -59,7 +59,7 @@ fun InvoiceDashboardScreen(
 
             item {
                 Text(
-                    text = "Ostatnie faktury",
+                    text = "Twoje Faktury",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
@@ -86,8 +86,12 @@ fun InvoiceDashboardScreen(
 fun RevenueCard(invoices: List<Invoice>, onDetailsClick: () -> Unit) {
     var balanceVisible by rememberSaveable { mutableStateOf(false) }
 
-    // Obliczamy przychód tylko z faktur typu "PRZYCHÓD"
-    val totalRevenue = invoices.filter { it.type == "PRZYCHOD" || it.type == "" }.sumOf { it.amount }
+    // ✅ KLUCZOWA ZMIANA: Dodano warunek && it.isPaid
+    // Teraz sumujemy tylko te przychody, które zostały faktycznie opłacone.
+    val totalRevenue = invoices.filter {
+        (it.type == "PRZYCHOD" || it.type == "") && it.isPaid
+    }.sumOf { it.amount }
+
     val balanceText = if (balanceVisible) String.format("%,.2f", totalRevenue) else "•••••"
 
     Card(
@@ -108,7 +112,7 @@ fun RevenueCard(invoices: List<Invoice>, onDetailsClick: () -> Unit) {
                 .padding(24.dp)
         ) {
             Text(
-                text = "Całkowity Przychód",
+                text = "Zrealizowany Przychód (Opłacone)", // ✅ Zmieniono etykietę dla jasności
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
             )
@@ -142,7 +146,7 @@ fun RevenueCard(invoices: List<Invoice>, onDetailsClick: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Zobacz szczegóły",
+                        text = "Zobacz statystyki",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimary,
                         fontWeight = FontWeight.Bold
@@ -161,64 +165,45 @@ fun RevenueCard(invoices: List<Invoice>, onDetailsClick: () -> Unit) {
 
 @Composable
 private fun InvoiceItem(invoice: Invoice, onClick: () -> Unit) {
+    val status = invoice.getStatus()
+    val isRevenue = invoice.type == "PRZYCHOD" || invoice.type == "" // ✅ Rozróżnienie typu
+
+    val (statusText, statusColor) = when(status) {
+        InvoiceStatus.PAID -> "Zapłacono" to Color(0xFF4CAF50)
+        InvoiceStatus.PENDING -> "Oczekuje" to MaterialTheme.colorScheme.primary
+        InvoiceStatus.OVERDUE -> "PRZEDAWNIONA" to MaterialTheme.colorScheme.error
+    }
+
+    // ✅ Kolorystyka i ikona zależna od typu (Przychód/Koszt)
+    val typeColor = if (isRevenue) MaterialTheme.colorScheme.primary else Color(0xFFE91E63) // Różowy/Karmazynowy dla kosztów
+    val typeIcon = if (isRevenue) Icons.Default.TrendingUp else Icons.Default.TrendingDown
+
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (invoice.isPaid) MaterialTheme.colorScheme.primaryContainer
-                        else MaterialTheme.colorScheme.errorContainer
-                    ),
+                modifier = Modifier.size(48.dp).clip(CircleShape).background(typeColor.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Description,
-                    contentDescription = null,
-                    tint = if (invoice.isPaid) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(24.dp)
-                )
+                Icon(imageVector = typeIcon, contentDescription = null, tint = typeColor)
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
+                Text(text = invoice.buyerName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                // Koszty wyświetlamy z minusem dla czytelności
                 Text(
-                    text = invoice.buyerName.ifBlank { "Nieznany Nabywca" },
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "${String.format("%,.2f", invoice.amount)} PLN",
+                    text = "${if (isRevenue) "" else "- "}${String.format("%,.2f", invoice.amount)} PLN",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isRevenue) MaterialTheme.colorScheme.onSurfaceVariant else Color.Red
                 )
-                Text(
-                    text = if (invoice.isPaid) "Zapłacono" else "Oczekuje na płatność",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = if (invoice.isPaid) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.error
-                )
+                Text(text = statusText, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold, color = statusColor)
             }
-
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.size(20.dp)
-            )
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = MaterialTheme.colorScheme.outline)
         }
     }
 }

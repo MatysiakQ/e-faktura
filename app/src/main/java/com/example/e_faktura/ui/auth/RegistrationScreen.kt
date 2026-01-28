@@ -2,61 +2,119 @@ package com.example.e_faktura.ui.auth
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel // ✅ ZMIENIONO
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.e_faktura.ui.AppViewModelProvider // ✅ DODANO
+import com.example.e_faktura.ui.AppViewModelProvider
 import com.example.e_faktura.ui.navigation.Screen
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegistrationScreen(
     navController: NavController,
-    // ✅ UŻYWAMY RĘCZNEJ FABRYKI
-    viewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
+    var login by remember { mutableStateOf<String>("") } // ✅ NOWE POLE
+    var email by remember { mutableStateOf<String>("") }
+    var password by remember { mutableStateOf<String>("") }
+    var confirmPassword by remember { mutableStateOf<String>("") }
+
+    val uiState by authViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Hasło") }, modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = confirmPassword, onValueChange = { confirmPassword = it }, label = { Text("Potwierdź hasło") }, modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(
-            onClick = {
-                if (password != confirmPassword) {
-                    Toast.makeText(context, "Hasła nie są zgodne", Toast.LENGTH_SHORT).show()
-                    return@Button
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("Utwórz konto") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Wróć")
+                    }
                 }
-                viewModel.register(email, password,
-                    onSuccess = {
-                        navController.navigate(Screen.MainApp.route) { popUpTo(Screen.Register.route) { inclusive = true } }
-                    },
-                    onError = { error -> Toast.makeText(context, error, Toast.LENGTH_LONG).show() }
-                )
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Zarejestruj się")
+            )
         }
-        TextButton(onClick = { navController.popBackStack() }) {
-            Text("Masz już konto? Zaloguj się")
+    ) { padding ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // ✅ POLE LOGINU
+            OutlinedTextField(
+                value = login,
+                onValueChange = { login = it },
+                label = { Text("Twój Login (widoczny w aplikacji)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email (do logowania)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Hasło") },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = confirmPassword,
+                onValueChange = { confirmPassword = it },
+                label = { Text("Powtórz hasło") },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(32.dp))
+
+            if (uiState.isLoading) {
+                CircularProgressIndicator()
+            } else {
+                Button(
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    onClick = {
+                        if (login.isBlank()) {
+                            Toast.makeText(context, "Podaj login!", Toast.LENGTH_SHORT).show()
+                        } else if (password != confirmPassword) {
+                            Toast.makeText(context, "Hasła się różnią", Toast.LENGTH_SHORT).show()
+                        } else if (password.length < 6) {
+                            Toast.makeText(context, "Hasło min. 6 znaków", Toast.LENGTH_SHORT).show()
+                        } else {
+                            authViewModel.register(
+                                email = email,
+                                pass = password,
+                                username = login, // ✅ Przekazujemy login
+                                onSuccess = {
+                                    Toast.makeText(context, "Konto utworzone!", Toast.LENGTH_SHORT).show()
+                                    navController.navigate(Screen.MainApp.route) {
+                                        popUpTo(0) { inclusive = true }
+                                    }
+                                },
+                                onError = { msg -> Toast.makeText(context, msg, Toast.LENGTH_LONG).show() }
+                            )
+                        }
+                    }
+                ) { Text("ZAREJESTRUJ SIĘ") }
+            }
         }
     }
 }

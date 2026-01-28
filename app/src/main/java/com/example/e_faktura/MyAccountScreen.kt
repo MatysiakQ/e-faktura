@@ -9,6 +9,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -45,11 +46,17 @@ fun MyAccountScreen(
     val context = LocalContext.current
 
     var showChangePasswordDialog by remember { mutableStateOf(false) }
+    var showChangeEmailDialog by remember { mutableStateOf(false) } // ✅ NOWE
 
-    LaunchedEffect(uiState) {
+    LaunchedEffect(uiState.passwordChangeSuccess, uiState.profileUpdateSuccess, uiState.emailChangeSuccess, uiState.error) {
         if (uiState.passwordChangeSuccess) {
             Toast.makeText(context, "Hasło zostało zmienione", Toast.LENGTH_SHORT).show()
             showChangePasswordDialog = false
+            authViewModel.resetAuthState()
+        }
+        if (uiState.emailChangeSuccess) { // ✅ Obsługa sukcesu email
+            Toast.makeText(context, "Email został zaktualizowany", Toast.LENGTH_SHORT).show()
+            showChangeEmailDialog = false
             authViewModel.resetAuthState()
         }
         if (uiState.profileUpdateSuccess) {
@@ -62,19 +69,28 @@ fun MyAccountScreen(
         }
     }
 
-    // ✅ Naprawione: Definicja dialogu znajduje się poniżej w tym samym pliku
     if (showChangePasswordDialog) {
         ChangePasswordDialog(
             onDismiss = { showChangePasswordDialog = false },
             uiState = uiState,
-            onConfirm = { newPassword: String -> authViewModel.changePassword(newPassword) }
+            onConfirm = { newPassword -> authViewModel.changePassword(newPassword) }
+        )
+    }
+
+    // ✅ NOWE: Dialog zmiany email
+    if (showChangeEmailDialog) {
+        ChangeEmailDialog(
+            currentEmail = user?.email ?: "",
+            onDismiss = { showChangeEmailDialog = false },
+            uiState = uiState,
+            onConfirm = { newEmail -> authViewModel.changeEmail(newEmail) }
         )
     }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Moje Konto") },
+                title = { Text("Moje Konto", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Wróć")
@@ -84,98 +100,94 @@ fun MyAccountScreen(
         }
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 20.dp).verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(32.dp))
+            ProfileHeroSection(user?.photoUrl, user?.displayName) { uri -> authViewModel.updateProfilePicture(uri) }
+            Spacer(Modifier.height(40.dp))
 
-            // ✅ Naprawione: Definicja sekcji profilu
-            ProfileHeroSection(user?.photoUrl, user?.email) { uri ->
-                authViewModel.updateProfilePicture(uri)
-            }
-
-            Spacer(Modifier.height(48.dp))
-
-            // ✅ Naprawione: Definicja sekcji bezpieczeństwa
-            SecuritySection { showChangePasswordDialog = true }
+            // ✅ ZAKTUALIZOWANO: Przekazujemy email i akcję zmiany
+            SecuritySection(
+                email = user?.email ?: "Brak adresu",
+                onChangeEmailClick = { showChangeEmailDialog = true },
+                onChangePasswordClick = { showChangePasswordDialog = true }
+            )
 
             Spacer(Modifier.weight(1f))
 
             Button(
-                onClick = {
-                    authViewModel.logout()
-                    navController.navigate("login") {
-                        popUpTo(navController.graph.id) { inclusive = true }
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.error
-                ),
-                modifier = Modifier.padding(vertical = 16.dp).fillMaxWidth()
+                onClick = { authViewModel.logout() },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.error),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.padding(vertical = 24.dp).fillMaxWidth().height(56.dp)
             ) {
-                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.size(8.dp))
-                Text("Wyloguj się")
+                Icon(Icons.AutoMirrored.Filled.Logout, null)
+                Spacer(Modifier.width(12.dp))
+                Text("WYLOGUJ SIĘ", fontWeight = FontWeight.Bold)
             }
         }
     }
 }
 
-// --- FUNKCJE POMOCNICZE (MUSZĄ BYĆ W TYM PLIKU) ---
-
 @Composable
-fun ProfileHeroSection(photoUrl: Uri?, email: String?, onImageSelected: (Uri) -> Unit) {
-    val imagePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-        onResult = { uri: Uri? -> uri?.let(onImageSelected) }
-    )
-
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+fun ProfileHeroSection(photoUrl: Uri?, login: String?, onImageSelected: (Uri) -> Unit) {
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? -> uri?.let(onImageSelected) }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(contentAlignment = Alignment.BottomEnd) {
             AsyncImage(
-                model = photoUrl,
-                contentDescription = "Zdjęcie profilowe",
+                model = photoUrl ?: "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                contentDescription = "Avatar",
                 placeholder = rememberVectorPainter(Icons.Default.AccountCircle),
-                error = rememberVectorPainter(Icons.Default.AccountCircle),
-                fallback = rememberVectorPainter(Icons.Default.AccountCircle),
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .border(2.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), CircleShape),
+                modifier = Modifier.size(130.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant).border(3.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), CircleShape),
                 contentScale = ContentScale.Crop
             )
-
-            IconButton(
-                onClick = { imagePicker.launch("image/*") },
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary)
-            ) {
-                Icon(Icons.Default.Edit, contentDescription = "Zmień zdjęcie", tint = Color.White, modifier = Modifier.size(20.dp))
+            SmallFloatingActionButton(onClick = { imagePicker.launch("image/*") }, containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White, shape = CircleShape) {
+                Icon(Icons.Default.PhotoCamera, null, modifier = Modifier.size(20.dp))
             }
         }
-        Text(email ?: "Brak adresu email", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(16.dp))
+        Text(text = login ?: "Gość", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
     }
 }
 
+// ✅ ZAKTUALIZOWANO: Sekcja zabezpieczeń z dwiema rubrykami
 @Composable
-fun SecuritySection(onChangePasswordClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Zabezpieczenia", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+fun SecuritySection(
+    email: String,
+    onChangeEmailClick: () -> Unit,
+    onChangePasswordClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text("Zabezpieczenia", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(16.dp))
+
+            // ✅ WIERSZ EMAIL (NAD HASŁEM)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(Icons.Default.Email, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.width(16.dp))
-                Text("Hasło", modifier = Modifier.weight(1f))
-                TextButton(onClick = onChangePasswordClick) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Adres e-mail", style = MaterialTheme.typography.labelSmall)
+                    Text(email, style = MaterialTheme.typography.bodyLarge)
+                }
+                Button(onClick = onChangeEmailClick, shape = RoundedCornerShape(10.dp)) {
+                    Text("ZMIEŃ")
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp)
+
+            // WIERSZ HASŁA
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.width(16.dp))
+                Text("Hasło dostępowe", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                Button(onClick = onChangePasswordClick, shape = RoundedCornerShape(10.dp)) {
                     Text("ZMIEŃ")
                 }
             }
@@ -183,64 +195,61 @@ fun SecuritySection(onChangePasswordClick: () -> Unit) {
     }
 }
 
+// ✅ NOWE: Dialog zmiany email
 @Composable
-fun ChangePasswordDialog(
+fun ChangeEmailDialog(
+    currentEmail: String,
     onDismiss: () -> Unit,
     uiState: AuthUiState,
     onConfirm: (String) -> Unit
 ) {
+    var newEmail by remember { mutableStateOf(currentEmail) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Zmień adres e-mail") },
+        text = {
+            OutlinedTextField(
+                value = newEmail,
+                onValueChange = { newEmail = it },
+                label = { Text("Nowy e-mail") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(newEmail) },
+                enabled = !uiState.isLoading && newEmail.isNotBlank()
+            ) {
+                if (uiState.isLoading) CircularProgressIndicator(Modifier.size(20.dp)) else Text("Zapisz")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } }
+    )
+}
+
+@Composable
+fun ChangePasswordDialog(onDismiss: () -> Unit, uiState: AuthUiState, onConfirm: (String) -> Unit) {
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     val context = LocalContext.current
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Zmień hasło") },
         text = {
-            Column {
-                OutlinedTextField(
-                    value = newPassword,
-                    onValueChange = { newPassword = it },
-                    label = { Text("Nowe hasło") },
-                    modifier = Modifier.fillMaxWidth(),
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, "Pokaż hasło")
-                        }
-                    }
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = confirmPassword,
-                    onValueChange = { confirmPassword = it },
-                    label = { Text("Potwierdź hasło") },
-                    modifier = Modifier.fillMaxWidth(),
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                )
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(newPassword, { newPassword = it }, label = { Text("Nowe hasło") }, visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation())
+                OutlinedTextField(confirmPassword, { confirmPassword = it }, label = { Text("Powtórz hasło") }, visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation())
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    if (newPassword.length < 6) {
-                        Toast.makeText(context, "Hasło musi mieć min. 6 znaków", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    if (newPassword != confirmPassword) {
-                        Toast.makeText(context, "Hasła nie są identyczne", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    onConfirm(newPassword)
-                },
-                enabled = !uiState.isLoading
-            ) {
-                if (uiState.isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
-                } else {
-                    Text("Zapisz")
-                }
+            Button(onClick = {
+                if (newPassword.length < 6) Toast.makeText(context, "Min. 6 znaków", Toast.LENGTH_SHORT).show()
+                else if (newPassword != confirmPassword) Toast.makeText(context, "Hasła się różnią", Toast.LENGTH_SHORT).show()
+                else onConfirm(newPassword)
+            }, enabled = !uiState.isLoading) {
+                if (uiState.isLoading) CircularProgressIndicator(Modifier.size(20.dp)) else Text("Zapisz")
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } }

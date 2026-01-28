@@ -98,17 +98,27 @@ fun CompanyDetailsScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Business, null, tint = MaterialTheme.colorScheme.primary)
                                 Spacer(Modifier.width(12.dp))
-                                Text(company.name, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                                // ✅ POPRAWKA: Użycie displayName (String) zamiast name (String?)
+                                Text(
+                                    text = company.displayName,
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
 
                             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), thickness = 0.5.dp)
 
                             DetailRow(icon = Icons.Default.Tag, label = "NIP", value = company.nip)
                             Spacer(Modifier.height(16.dp))
+
+                            // ✅ POPRAWKA: Zabezpieczenie przed pustymi polami adresu
+                            val addressLine = company.address.ifBlank { "Brak adresu" }
+                            val cityLine = "${company.postalCode} ${company.city}".trim()
+
                             DetailRow(
                                 icon = Icons.Default.LocationOn,
                                 label = "Adres",
-                                value = "${company.address}\n${company.postalCode} ${company.city}"
+                                value = if (cityLine.isEmpty()) addressLine else "$addressLine\n$cityLine"
                             )
                         }
                     }
