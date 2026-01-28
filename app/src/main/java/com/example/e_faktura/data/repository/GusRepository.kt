@@ -16,18 +16,21 @@ class GusRepository(private val gusService: GusService) {
             val subject = response.result?.subject ?: return null
 
             val fullAddress = subject.address ?: ""
-            // Regex do rozbicia adresu: "ul. Prosta 49 00-838 Warszawa"
+
+            // ✅ REGEX: Rozbija adres typu "ul. Prosta 49 00-838 Warszawa"
+            // Group 1: Ulica i numer, Group 2: Kod pocztowy, Group 3: Miasto
             val regex = """^(.*)\s(\d{2}-\d{3})\s(.*)$""".toRegex()
             val match = regex.find(fullAddress)
 
             GusData(
                 name = subject.name,
-                address = match?.groupValues?.get(1) ?: fullAddress,
+                address = match?.groupValues?.get(1)?.trim() ?: fullAddress,
                 postalCode = match?.groupValues?.get(2) ?: "",
-                city = match?.groupValues?.get(3) ?: "",
-                bankAccount = subject.accountNumbers?.firstOrNull()
+                city = match?.groupValues?.get(3)?.trim() ?: "",
+                bankAccount = subject.accountNumbers?.firstOrNull() // Pobieramy pierwsze konto
             )
         } catch (e: Exception) {
+            e.printStackTrace()
             null
         }
     }

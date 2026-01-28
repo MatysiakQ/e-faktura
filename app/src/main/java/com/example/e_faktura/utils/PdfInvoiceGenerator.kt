@@ -3,6 +3,7 @@ package com.example.e_faktura.utils
 import android.content.Context
 import android.content.Intent
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
@@ -26,32 +27,64 @@ object PdfInvoiceGenerator {
         val page = pdfDocument.startPage(pageInfo)
         val canvas: Canvas = page.canvas
 
-        // --- Rysowanie treści ---
-        titlePaint.textSize = 24f
+        // --- NAGŁÓWEK ---
+        titlePaint.textSize = 26f
         titlePaint.isFakeBoldText = true
-        canvas.drawText("FAKTURA NR: ${invoice.invoiceNumber}", 50f, 50f, titlePaint)
+        titlePaint.color = Color.BLACK
+        canvas.drawText("FAKTURA VAT", 50f, 60f, titlePaint)
 
-        paint.textSize = 14f
+        paint.textSize = 12f
+        paint.color = Color.DKGRAY
+        canvas.drawText("Numer: ${invoice.invoiceNumber}", 50f, 85f, paint) //
+
         val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
-        canvas.drawText("Data wystawienia: ${sdf.format(Date(invoice.dueDate))}", 50f, 80f, paint)
+        canvas.drawText("Data wystawienia: ${sdf.format(Date(invoice.dueDate))}", 380f, 85f, paint)
 
-        canvas.drawLine(50f, 100f, 545f, 100f, paint)
+        // Linia oddzielająca
+        paint.strokeWidth = 2f
+        canvas.drawLine(50f, 110f, 545f, 110f, paint)
+
+        // --- SEKRETY: SPRZEDAWCA I NABYWCA ---
+        paint.textSize = 10f
+        paint.isFakeBoldText = true
+        paint.color = Color.BLACK
+        canvas.drawText("SPRZEDAWCA:", 50f, 140f, paint)
+        canvas.drawText("NABYWCA:", 300f, 140f, paint)
+
+        paint.isFakeBoldText = false
+        // Tutaj powinieneś przekazać dane swojej firmy
+        canvas.drawText("Twoja Firma Sp. z o.o.", 50f, 160f, paint)
+        canvas.drawText("ul. Testowa 1, 00-000 Miasto", 50f, 175f, paint)
+        canvas.drawText("NIP: 1234567890", 50f, 190f, paint)
+
+        // Dane nabywcy z obiektu invoice
+        canvas.drawText(invoice.buyerName, 300f, 160f, paint)
+        canvas.drawText("NIP: ${invoice.buyerNip}", 300f, 175f, paint)
+
+        // --- TABELA / PODSUMOWANIE ---
+        paint.strokeWidth = 1f
+        canvas.drawLine(50f, 220f, 545f, 220f, paint)
 
         paint.isFakeBoldText = true
-        canvas.drawText("NABYWCA:", 50f, 130f, paint)
+        canvas.drawText("Nazwa usługi/towaru", 50f, 240f, paint)
+        canvas.drawText("Kwota brutto", 450f, 240f, paint)
         paint.isFakeBoldText = false
-        canvas.drawText(invoice.buyerName, 50f, 150f, paint)
-        canvas.drawText("NIP: ${invoice.buyerNip}", 50f, 170f, paint)
 
         canvas.drawLine(50f, 250f, 545f, 250f, paint)
-        paint.textSize = 18f
+
+        canvas.drawText("Usługa handlowa / Sprzedaż towaru", 50f, 275f, paint)
+        canvas.drawText("${String.format("%.2f", invoice.amount)} PLN", 450f, 275f, paint) //
+
+        // --- DO ZAPŁATY ---
+        paint.textSize = 16f
         paint.isFakeBoldText = true
-        canvas.drawText("SUMA DO ZAPŁATY: ${String.format("%.2f", invoice.amount)} PLN", 50f, 280f, paint)
+        canvas.drawText("RAZEM DO ZAPŁATY:", 250f, 350f, paint)
+        canvas.drawText("${String.format("%.2f", invoice.amount)} PLN", 420f, 350f, paint)
 
         pdfDocument.finishPage(page)
 
-        // --- Zapis i otwieranie ---
-        val file = File(context.cacheDir, "Faktura_${invoice.invoiceNumber.replace("/", "_")}.pdf")
+        // --- ZAPIS I OTWIERANIE ---
+        val file = File(context.cacheDir, "Faktura_${invoice.id}.pdf")
         try {
             pdfDocument.writeTo(FileOutputStream(file))
             val uri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
@@ -61,7 +94,7 @@ object PdfInvoiceGenerator {
             }
             context.startActivity(Intent.createChooser(intent, "Otwórz fakturę:"))
         } catch (e: Exception) {
-            Toast.makeText(context, "Błąd PDF: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Błąd generowania PDF", Toast.LENGTH_SHORT).show()
         } finally {
             pdfDocument.close()
         }

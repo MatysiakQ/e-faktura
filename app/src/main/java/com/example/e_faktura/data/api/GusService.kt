@@ -6,10 +6,9 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface GusService {
-    // Oficjalne zapytanie do Białej Listy MF
     @GET("api/search/nip/{nip}")
     suspend fun getCompanyData(
         @Path("nip") nip: String,
-        @Query("date") date: String // format yyyy-MM-dd
+        @Query("date") date: String // format: yyyy-MM-dd
     ): GusResponse
 }
