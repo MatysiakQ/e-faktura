@@ -20,7 +20,7 @@ data class AuthUiState(
     val isLoginSuccess: Boolean = false,
     val passwordChangeSuccess: Boolean = false,
     val profileUpdateSuccess: Boolean = false,
-    val emailChangeSuccess: Boolean = false // ✅ DODANO: Status zmiany email
+    val emailChangeSuccess: Boolean = false
 )
 
 class AuthViewModel : ViewModel() {
@@ -65,7 +65,6 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    // ✅ DODANO: Metoda zmiany adresu e-mail
     fun changeEmail(newEmail: String) {
         viewModelScope.launch {
             val currentUser = auth.currentUser ?: return@launch
@@ -119,7 +118,7 @@ class AuthViewModel : ViewModel() {
             it.copy(
                 passwordChangeSuccess = false,
                 profileUpdateSuccess = false,
-                emailChangeSuccess = false, // ✅ Zresetuj status
+                emailChangeSuccess = false,
                 error = null
             )
         }

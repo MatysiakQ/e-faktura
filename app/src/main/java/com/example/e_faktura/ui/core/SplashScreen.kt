@@ -22,7 +22,7 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(navController: NavController) {
-    // ✅ Pobieramy ViewModel sesji przez naszą fabrykę
+    // Pobieramy ViewModel sesji przez naszą fabrykę
     val authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val user by authViewModel.user.collectAsState()
     val scale = remember { Animatable(0.5f) }
@@ -34,7 +34,7 @@ fun SplashScreen(navController: NavController) {
         )
         delay(500)
 
-        // ✅ LOGIKA NAWIGACJI
+        //  LOGIKA NAWIGACJI
         if (user != null) {
             navController.navigate(Screen.MainApp.route) {
                 popUpTo(Screen.Splash.route) { inclusive = true }

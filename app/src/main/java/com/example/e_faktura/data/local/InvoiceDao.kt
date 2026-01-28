@@ -20,7 +20,6 @@ interface InvoiceDao {
     @Delete
     suspend fun deleteInvoice(invoice: Invoice)
 
-    // ✅ ZMIANA: suspend zamiast Flow, aby pasowało do logiki getInvoiceById w Repository
     @Query("SELECT * FROM invoices WHERE id = :id")
     suspend fun getInvoiceById(id: String): Invoice?
 

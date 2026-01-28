@@ -22,7 +22,6 @@ import com.example.e_faktura.ui.AppViewModelProvider
 @Composable
 fun InvoiceListScreen(
     navController: NavController,
-    // ✅ Używamy fabryki z AppViewModelProvider
     viewModel: InvoiceListViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -47,7 +46,6 @@ fun InvoiceListScreen(
                             Icon(Icons.Default.Receipt, null, modifier = Modifier.size(32.dp))
                             Spacer(Modifier.width(16.dp))
                             Column {
-                                // ✅ NAPRAWIONO: 'invoiceNumber' zamiast 'number'
                                 Text("Faktura nr: ${invoice.invoiceNumber}", fontWeight = FontWeight.Bold)
                                 Text("${String.format("%.2f", invoice.amount)} PLN")
                             }

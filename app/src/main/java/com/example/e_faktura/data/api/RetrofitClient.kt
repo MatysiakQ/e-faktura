@@ -4,7 +4,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
-    // ✅ Oficjalne API Ministerstwa Finansów (Biała Lista)
+    //Oficjalne API Ministerstwa Finansów (Biała Lista)
     private const val BASE_URL = "https://wl-api.mf.gov.pl/"
 
     private val retrofit: Retrofit by lazy {

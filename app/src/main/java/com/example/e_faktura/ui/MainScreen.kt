@@ -10,7 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.lifecycle.viewmodel.compose.viewModel // ✅ Zmieniono z hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -18,7 +18,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.e_faktura.ui.AppViewModelProvider // ✅ Dodano naszą fabrykę
+import com.example.e_faktura.ui.AppViewModelProvider
 import com.example.e_faktura.ui.auth.AuthViewModel
 import com.example.e_faktura.ui.company.list.CompanyListScreen
 import com.example.e_faktura.ui.invoice.list.InvoiceDashboardScreen
@@ -30,7 +30,6 @@ private data class BottomNavItem(val route: String, val label: String, val icon:
 @Composable
 fun MainScreen(rootNavController: NavController) {
     val bottomNavController = rememberNavController()
-    // ✅ Zastąpiono hiltViewModel() ręczną fabryką
     val authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
     var showMenu by remember { mutableStateOf(false) }
 
@@ -52,7 +51,7 @@ fun MainScreen(rootNavController: NavController) {
                         DropdownMenuItem(
                             text = { Text("Moje Konto") },
                             onClick = {
-                                rootNavController.navigate("profile") // ✅ Spójne z MyAccountScreen
+                                rootNavController.navigate("profile")
                                 showMenu = false
                             }
                         )

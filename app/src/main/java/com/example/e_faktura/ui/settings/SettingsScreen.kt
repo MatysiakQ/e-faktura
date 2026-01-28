@@ -47,10 +47,8 @@ fun SettingsScreen(
     isDarkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit
 ) {
-    // Dummy state for features to be implemented in ViewModel
     var selectedCurrency by remember { mutableStateOf("PLN") }
-    val appVersion = "1.0.0" // This would come from BuildConfig in a real app
-
+    val appVersion = "1.0.0"
     Scaffold(
         topBar = {
             TopAppBar(
@@ -100,7 +98,7 @@ fun SettingsScreen(
             SettingsClickableItem(
                 title = "Regulamin",
                 icon = Icons.Filled.Info,
-                onClick = { /* TODO: Navigate to Terms of Service screen or URL */ }
+                onClick = { /* TODO */ }
             )
         }
     }

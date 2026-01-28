@@ -56,17 +56,15 @@ class MainActivity : ComponentActivity() {
     private lateinit var networkReceiver: NetworkChangeReceiver //
     private var isNetworkAvailable = mutableStateOf(true) //
 
-    // Launcher do prośby o uprawnienia powiadomień (Android 13+)
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
-        // Uprawnienie przyznane lub nie
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ✅ Prośba o uprawnienia do powiadomień
+        // Prośba o uprawnienia do powiadomień
         checkNotificationPermission()
 
         val syncIntent = Intent(this, SyncService::class.java) //
@@ -137,7 +135,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Reszta kodu AppScaffold pozostaje bez zmian jak w Twoim pliku wejściowym
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppScaffold(rootNavController: NavHostController) {

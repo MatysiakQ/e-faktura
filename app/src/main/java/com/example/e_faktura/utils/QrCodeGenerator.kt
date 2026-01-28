@@ -12,7 +12,6 @@ object QrCodeGenerator {
     private const val QR_CODE_SIZE = 512
 
     fun generateQrBitmap(content: String?): ImageBitmap? {
-        // Safety Guard: Prevent crash on empty/null content
         if (content.isNullOrBlank()) {
             return null
         }
@@ -28,7 +27,6 @@ object QrCodeGenerator {
             }
             bmp.asImageBitmap()
         } catch (e: Exception) {
-            // Log the exception in a real app
             e.printStackTrace()
             null
         }

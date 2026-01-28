@@ -53,7 +53,6 @@ fun EditCompanyScreen(
     val context = LocalContext.current
     var showIconPicker by remember { mutableStateOf(false) }
 
-    // Launcher do galerii zdjęć
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
@@ -83,7 +82,6 @@ fun EditCompanyScreen(
                 viewModel.updateIcon("${selectedIcon.type}:${selectedIcon.value}")
                 showIconPicker = false
             },
-            // ✅ NAPRAWIONO: Dodano brakujący parametr galerii
             onPickFromGallery = {
                 photoPickerLauncher.launch(
                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -115,12 +113,10 @@ fun EditCompanyScreen(
             ) {
                 Spacer(Modifier.height(16.dp))
 
-                // Awatar z obsługą CUSTOM/VECTOR
                 CompanyAvatar(iconString = state.icon, onClick = { showIconPicker = true })
 
                 Spacer(Modifier.height(24.dp))
 
-                // Pole NIP
                 OutlinedTextField(
                     value = state.nip,
                     onValueChange = { viewModel.updateNip(it) },
@@ -141,7 +137,6 @@ fun EditCompanyScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Nazwa Firmy
                 OutlinedTextField(
                     value = state.name,
                     onValueChange = { viewModel.updateName(it) },
@@ -157,7 +152,6 @@ fun EditCompanyScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Adres
                 OutlinedTextField(
                     value = state.address,
                     onValueChange = { viewModel.updateAddress(it) },
@@ -170,7 +164,6 @@ fun EditCompanyScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Właściciel
                 OutlinedTextField(
                     value = state.ownerFullName,
                     onValueChange = { viewModel.updateOwner(it) },
@@ -182,7 +175,6 @@ fun EditCompanyScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Konto bankowe
                 OutlinedTextField(
                     value = state.bankAccount,
                     onValueChange = { viewModel.updateBankAccount(it) },
@@ -225,7 +217,6 @@ private fun CompanyAvatar(iconString: String, onClick: () -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         val parts = iconString.split(":", limit = 2)
-        // ✅ NAPRAWIONO: Zmiana PREDEFINED na VECTOR
         val type = if (parts.getOrNull(0) == "CUSTOM") IconType.CUSTOM else IconType.VECTOR
         val value = parts.getOrNull(1) ?: "Business"
 
@@ -237,7 +228,6 @@ private fun CompanyAvatar(iconString: String, onClick: () -> Unit) {
                 contentScale = ContentScale.Crop
             )
         } else {
-            // ✅ NAPRAWIONO: Bezpieczne pobieranie ikony (Business zamiast Storefront)
             val iconVector = try {
                 IconProvider.getIcon(value)
             } catch (e: Exception) { Icons.Default.Business }

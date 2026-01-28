@@ -44,14 +44,13 @@ class CompanyFormViewModel(
         _uiState.update { it.copy(nip = filtered, error = null) }
     }
 
-    // ✅ NAPRAWIONO: Dodano brakującą metodę dla AddCompanyScreen
     fun updatePostalCode(input: String) {
         val digits = input.filter { it.isDigit() }.take(5)
         val formatted = if (digits.length > 2) "${digits.take(2)}-${digits.drop(2)}" else digits
         _uiState.update { it.copy(postalCode = formatted) }
     }
 
-    // ✅ NAPRAWIONO: Dodano brakującą metodę dla AddCompanyScreen
+
     fun updateBankAccount(input: String) {
         val digits = input.filter { it.isDigit() }.take(26)
         val formatted = StringBuilder()
@@ -76,7 +75,6 @@ class CompanyFormViewModel(
                 val data = gusRepository.searchByNip(nip)
                 if (data != null) {
                     _uiState.update { it.copy(
-                        // ✅ NAPRAWIONO: Operator ?: "" eliminuje błąd Argument type mismatch
                         name = data.name ?: "",
                         address = data.address ?: "",
                         city = data.city ?: "",

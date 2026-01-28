@@ -27,7 +27,6 @@ fun LoginScreen(
     // Reakcja na sukces logowania
     LaunchedEffect(state.isLoginSuccess) {
         if (state.isLoginSuccess) {
-            // ✅ POPRAWKA: Wchodzimy do głównego kontenera aplikacji zamiast do "home"
             navController.navigate(Screen.MainApp.route) {
                 popUpTo(Screen.Login.route) { inclusive = true }
             }
@@ -79,7 +78,6 @@ fun LoginScreen(
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
-        // ✅ NAPRAWIONO: Przycisk gościa teraz poprawnie otwiera aplikację
         OutlinedButton(
             onClick = {
                 navController.navigate(Screen.MainApp.route) {

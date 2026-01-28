@@ -55,7 +55,6 @@ fun QrCodeScannerScreen(
         onResult = { isGranted ->
             hasCameraPermission = isGranted
             if (!isGranted) {
-                // Optionally, show a toast or message that permission was denied
                 navController.popBackStack()
             }
         }
@@ -83,13 +82,11 @@ fun QrCodeScannerScreen(
             }
             scanLauncher.launch(options)
         } else {
-            // Request permission if not already granted
+            // Request permission
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
-    // This part of the UI will be briefly visible while the permission is being requested,
-    // or if the user navigates back from the permission dialog.
     if (!hasCameraPermission) {
         Scaffold(
             topBar = {

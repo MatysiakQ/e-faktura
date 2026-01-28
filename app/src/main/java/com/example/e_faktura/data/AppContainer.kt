@@ -5,7 +5,7 @@ import com.example.e_faktura.data.local.AppDatabase
 import com.example.e_faktura.data.repository.CompanyRepository
 import com.example.e_faktura.data.repository.GusRepository
 import com.example.e_faktura.data.repository.InvoiceRepository
-import com.example.e_faktura.data.api.RetrofitClient // ✅ DODANO IMPORT
+import com.example.e_faktura.data.api.RetrofitClient
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -33,7 +33,6 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val gusRepository: GusRepository by lazy {
-        // ✅ Teraz RetrofitClient będzie widoczny
         GusRepository(RetrofitClient.gusService)
     }
 }

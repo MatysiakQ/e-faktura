@@ -20,10 +20,9 @@ class EfakturaApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // ✅ Inicjalizacja Twojego kontenera
         container = DefaultAppContainer(this)
 
-        // ✅ Uruchomienie sprawdzania faktur w tle
+        //Uruchomienie sprawdzania faktur w tle
         setupOverdueWorker()
     }
 

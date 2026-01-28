@@ -4,7 +4,6 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.google.firebase.firestore.PropertyName
 
-// ✅ DODANO: Logika statusów faktury
 enum class InvoiceStatus {
     PAID,       // Opłacona
     PENDING,    // Oczekująca (w terminie)
@@ -29,7 +28,6 @@ data class Invoice(
     val userId: String = ""
 )
 
-// ✅ DODANO: Rozszerzenie ułatwiające sprawdzanie statusu w UI i Workerze
 fun Invoice.getStatus(): InvoiceStatus {
     return when {
         isPaid -> InvoiceStatus.PAID

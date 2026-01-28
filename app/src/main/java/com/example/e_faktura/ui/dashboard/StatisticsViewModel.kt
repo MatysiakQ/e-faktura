@@ -40,13 +40,10 @@ class StatisticsViewModel(
                 val now = LocalDate.now()
                 val monthName = now.month.getDisplayName(TextStyle.FULL, Locale("pl"))
 
-                // ✅ POPRAWKA: Przychód (Revenue) liczymy TYLKO z OPŁACONYCH faktur
                 val rev = invoices.filter { it.type == "PRZYCHOD" && it.isPaid }.sumOf { it.amount }
 
-                // ✅ Koszty (KOSZT) - tutaj zazwyczaj liczy się wszystkie, aby widzieć zobowiązania
                 val cst = invoices.filter { it.type == "KOSZT" }.sumOf { it.amount }
 
-                // ✅ Oczekujące (Pending) - sumujemy TYLKO NIEOPŁACONE faktury przychodowe
                 val pending = invoices.filter { it.type == "PRZYCHOD" && !it.isPaid }.sumOf { it.amount }
 
                 // Filtrowanie przedawnionych (nieopłacone i po terminie)

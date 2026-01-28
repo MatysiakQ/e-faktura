@@ -26,7 +26,6 @@ class CompanyRepository(
         }
     }
 
-    // ✅ NOWA FUNKCJA: Usuwanie firmy z Chmury i Lokalnie
     suspend fun deleteCompany(company: Company) {
         try {
             // Usuwamy z Firestore

@@ -3,7 +3,6 @@ package com.example.e_faktura.model
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-// ✅ DODANO: Typ działalności potrzebny do testów
 enum class CompanyType { FIRM, SOLE_PROPRIETORSHIP }
 
 @Entity(tableName = "companies")
@@ -12,7 +11,7 @@ data class Company(
     val id: String = "",
     val nip: String = "",
     val name: String? = null,
-    val type: CompanyType = CompanyType.FIRM, // ✅ DODANO
+    val type: CompanyType = CompanyType.FIRM,
     val address: String = "",
     val postalCode: String = "",
     val city: String = "",
@@ -21,7 +20,7 @@ data class Company(
     val icon: String = "",
     val userId: String = ""
 ) {
-    // ✅ DODANO: Logika sprawdzana w CompanyTest.kt
+    //Logika sprawdzana w CompanyTest.kt
     val displayName: String
         get() = when (type) {
             CompanyType.FIRM -> if (!name.isNullOrBlank()) name else "Brak nazwy"

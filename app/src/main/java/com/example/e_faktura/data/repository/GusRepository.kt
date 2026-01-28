@@ -17,7 +17,7 @@ class GusRepository(private val gusService: GusService) {
 
             val fullAddress = subject.address ?: ""
 
-            // ✅ REGEX: Rozbija adres typu "ul. Prosta 49 00-838 Warszawa"
+            // REGEX: Rozbija adres typu "ul. Prosta 49 00-838 Warszawa"
             // Group 1: Ulica i numer, Group 2: Kod pocztowy, Group 3: Miasto
             val regex = """^(.*)\s(\d{2}-\d{3})\s(.*)$""".toRegex()
             val match = regex.find(fullAddress)

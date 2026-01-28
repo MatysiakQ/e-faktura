@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CompanyDao {
-    // Zmiana: ORDER BY name zamiast name
     @Query("SELECT * from companies ORDER BY name ASC")
     fun getAllCompanies(): Flow<List<Company>>
 

@@ -54,7 +54,7 @@ fun MyAccountScreen(
             showChangePasswordDialog = false
             authViewModel.resetAuthState()
         }
-        if (uiState.emailChangeSuccess) { // ✅ Obsługa sukcesu email
+        if (uiState.emailChangeSuccess) { //Obsługa sukcesu email
             Toast.makeText(context, "Email został zaktualizowany", Toast.LENGTH_SHORT).show()
             showChangeEmailDialog = false
             authViewModel.resetAuthState()
@@ -77,7 +77,7 @@ fun MyAccountScreen(
         )
     }
 
-    // ✅ NOWE: Dialog zmiany email
+    // Dialog zmiany email
     if (showChangeEmailDialog) {
         ChangeEmailDialog(
             currentEmail = user?.email ?: "",
@@ -107,7 +107,6 @@ fun MyAccountScreen(
             ProfileHeroSection(user?.photoUrl, user?.displayName) { uri -> authViewModel.updateProfilePicture(uri) }
             Spacer(Modifier.height(40.dp))
 
-            // ✅ ZAKTUALIZOWANO: Przekazujemy email i akcję zmiany
             SecuritySection(
                 email = user?.email ?: "Brak adresu",
                 onChangeEmailClick = { showChangeEmailDialog = true },
@@ -151,7 +150,6 @@ fun ProfileHeroSection(photoUrl: Uri?, login: String?, onImageSelected: (Uri) ->
     }
 }
 
-// ✅ ZAKTUALIZOWANO: Sekcja zabezpieczeń z dwiema rubrykami
 @Composable
 fun SecuritySection(
     email: String,
@@ -167,7 +165,6 @@ fun SecuritySection(
             Text("Zabezpieczenia", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(16.dp))
 
-            // ✅ WIERSZ EMAIL (NAD HASŁEM)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Email, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.width(16.dp))
@@ -195,7 +192,6 @@ fun SecuritySection(
     }
 }
 
-// ✅ NOWE: Dialog zmiany email
 @Composable
 fun ChangeEmailDialog(
     currentEmail: String,

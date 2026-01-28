@@ -44,7 +44,6 @@ import com.example.e_faktura.ui.components.IconProvider
 @Composable
 fun AddCompanyScreen(
     navController: NavController,
-    // ✅ Korzystamy z ręcznej fabryki DI, aby uniknąć błędu 'No initializer set'
     viewModel: CompanyFormViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -59,7 +58,6 @@ fun AddCompanyScreen(
         }
     }
 
-    // ✅ Obsługa zdarzeń jednorazowych (Sukces/Błąd)
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { event ->
             when (event) {

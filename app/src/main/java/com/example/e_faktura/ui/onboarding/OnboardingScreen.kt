@@ -32,17 +32,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
-
-// A simple data class to hold the content for each onboarding slide
 data class OnboardingSlide(
     val title: String,
     val description: String,
     val icon: ImageVector
 )
 
-// --- DataStore Logic to check if onboarding has been completed ---
-// This would typically be in your data layer, but for simplicity, we add it here.
-// You should create a new file for this logic in a real app, e.g., `data/repository/UserPreferencesRepository.kt`
 private fun setOnboardingCompleted(context: Context) {
     val sharedPrefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
     with(sharedPrefs.edit()) {
@@ -98,7 +93,6 @@ fun OnboardingScreen(navController: NavController) {
                 Text("Rozpocznij")
             }
         } else {
-            // Placeholder for indicators or a 'Next' button if you want one
             Spacer(modifier = Modifier.height(66.dp)) // Matches button height + padding
         }
     }

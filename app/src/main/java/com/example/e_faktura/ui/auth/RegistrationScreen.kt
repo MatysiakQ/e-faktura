@@ -50,7 +50,7 @@ fun RegistrationScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // ✅ POLE LOGINU
+            // POLE LOGINU
             OutlinedTextField(
                 value = login,
                 onValueChange = { login = it },
@@ -102,7 +102,7 @@ fun RegistrationScreen(
                             authViewModel.register(
                                 email = email,
                                 pass = password,
-                                username = login, // ✅ Przekazujemy login
+                                username = login,
                                 onSuccess = {
                                     Toast.makeText(context, "Konto utworzone!", Toast.LENGTH_SHORT).show()
                                     navController.navigate(Screen.MainApp.route) {

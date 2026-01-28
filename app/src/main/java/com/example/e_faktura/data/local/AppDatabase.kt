@@ -26,7 +26,6 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "efaktura_database"
                 )
-                    // ✅ To pozwoli uniknąć crasha przy zmianie kolumn (usuwa stare dane!)
                     .fallbackToDestructiveMigration()
                     .build()
                     .also { Instance = it }

@@ -26,7 +26,6 @@ class InvoiceRepository(
                 val snapshot = firestore.collection("users").document(currentUserId)
                     .collection("invoices").document(id).get().await()
 
-                // Jeśli nie ma w Firebase, szukaj lokalnie
                 snapshot.toObject(Invoice::class.java) ?: invoiceDao.getInvoiceById(id)
             } catch (e: Exception) {
                 invoiceDao.getInvoiceById(id)
@@ -61,13 +60,12 @@ class InvoiceRepository(
         val currentUserId = userId
         val currentTime = System.currentTimeMillis()
 
-        // ✅ OBLICZENIE: 14 dni w milisekundach (14 * 24 * 60 * 60 * 1000)
         val twoWeeksInMs = 1_209_600_000L
         val automaticDueDate = currentTime + twoWeeksInMs
 
         val finalInvoice = invoice.copy(
             userId = currentUserId ?: "",
-            dueDate = automaticDueDate, // Automatyczny termin
+            dueDate = automaticDueDate,
             isPaid = false
         )
 
@@ -81,7 +79,6 @@ class InvoiceRepository(
 
     suspend fun updateInvoice(invoice: Invoice) {
         val currentUserId = userId
-        // ✅ NAPRAWIONO: 'updateInvoice' zamiast 'update'
         invoiceDao.updateInvoice(invoice)
 
         if (currentUserId != null) {
@@ -92,7 +89,6 @@ class InvoiceRepository(
 
     suspend fun deleteInvoice(invoice: Invoice) {
         val currentUserId = userId
-        // ✅ NAPRAWIONO: 'deleteInvoice' zamiast 'delete'
         invoiceDao.deleteInvoice(invoice)
 
         if (currentUserId != null) {

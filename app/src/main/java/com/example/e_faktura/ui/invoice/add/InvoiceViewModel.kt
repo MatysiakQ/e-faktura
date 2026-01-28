@@ -17,7 +17,7 @@ data class InvoiceUiState(
     val buyerNip: String = "",
     val amount: String = "",
     val invoiceNumber: String = "",
-    val type: String = "PRZYCHOD", // ✅ DODANO: Domyślny typ to Przychód
+    val type: String = "PRZYCHOD",
     val isSaving: Boolean = false,
     val isLoadingGus: Boolean = false,
     val error: String? = null
@@ -45,7 +45,6 @@ class InvoiceViewModel(
     fun updateBuyerNip(nip: String) { _uiState.update { it.copy(buyerNip = nip, error = null) } }
     fun updateAmount(amount: String) { _uiState.update { it.copy(amount = amount) } }
     fun updateNumber(number: String) { _uiState.update { it.copy(invoiceNumber = number, error = null) } }
-    // ✅ DODANO: Metoda aktualizacji typu
     fun updateType(type: String) { _uiState.update { it.copy(type = type) } }
 
     fun selectCompany(company: Company) {
@@ -91,7 +90,7 @@ class InvoiceViewModel(
                 val invoice = Invoice(
                     id = UUID.randomUUID().toString(),
                     invoiceNumber = _uiState.value.invoiceNumber,
-                    type = _uiState.value.type, // ✅ Zapisujemy wybrany typ
+                    type = _uiState.value.type, // Zapisujemy wybrany typ
                     buyerName = _uiState.value.buyerName,
                     buyerNip = _uiState.value.buyerNip,
                     amount = _uiState.value.amount.toDoubleOrNull() ?: 0.0,

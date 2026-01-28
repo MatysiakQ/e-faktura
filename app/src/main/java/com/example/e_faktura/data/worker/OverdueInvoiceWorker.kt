@@ -22,7 +22,6 @@ class OverdueInvoiceWorker(
         return try {
             val invoices: List<Invoice> = container.invoiceRepository.getInvoices().first()
 
-            // ✅ Korzystamy z centralnej logiki statusu
             val overdueInvoices = invoices.filter { it.getStatus() == InvoiceStatus.OVERDUE }
 
             overdueInvoices.forEach { invoice ->

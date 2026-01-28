@@ -30,7 +30,6 @@ import com.example.e_faktura.ui.AppViewModelProvider // ✅ Dodano naszą fabryk
 @Composable
 fun StatisticsScreen(
     navController: NavController,
-    // ✅ Używamy ręcznej fabryki zamiast hiltViewModel()
     statisticsViewModel: StatisticsViewModel = viewModel(factory = AppViewModelProvider.Factory),
     onOverdueClick: () -> Unit
 ) {

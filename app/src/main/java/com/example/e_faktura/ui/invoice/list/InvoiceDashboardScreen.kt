@@ -86,8 +86,6 @@ fun InvoiceDashboardScreen(
 fun RevenueCard(invoices: List<Invoice>, onDetailsClick: () -> Unit) {
     var balanceVisible by rememberSaveable { mutableStateOf(false) }
 
-    // ✅ KLUCZOWA ZMIANA: Dodano warunek && it.isPaid
-    // Teraz sumujemy tylko te przychody, które zostały faktycznie opłacone.
     val totalRevenue = invoices.filter {
         (it.type == "PRZYCHOD" || it.type == "") && it.isPaid
     }.sumOf { it.amount }
@@ -112,7 +110,7 @@ fun RevenueCard(invoices: List<Invoice>, onDetailsClick: () -> Unit) {
                 .padding(24.dp)
         ) {
             Text(
-                text = "Zrealizowany Przychód (Opłacone)", // ✅ Zmieniono etykietę dla jasności
+                text = "Zrealizowany Przychód (Opłacone)",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
             )
@@ -166,7 +164,7 @@ fun RevenueCard(invoices: List<Invoice>, onDetailsClick: () -> Unit) {
 @Composable
 private fun InvoiceItem(invoice: Invoice, onClick: () -> Unit) {
     val status = invoice.getStatus()
-    val isRevenue = invoice.type == "PRZYCHOD" || invoice.type == "" // ✅ Rozróżnienie typu
+    val isRevenue = invoice.type == "PRZYCHOD" || invoice.type == ""
 
     val (statusText, statusColor) = when(status) {
         InvoiceStatus.PAID -> "Zapłacono" to Color(0xFF4CAF50)
@@ -174,8 +172,7 @@ private fun InvoiceItem(invoice: Invoice, onClick: () -> Unit) {
         InvoiceStatus.OVERDUE -> "PRZEDAWNIONA" to MaterialTheme.colorScheme.error
     }
 
-    // ✅ Kolorystyka i ikona zależna od typu (Przychód/Koszt)
-    val typeColor = if (isRevenue) MaterialTheme.colorScheme.primary else Color(0xFFE91E63) // Różowy/Karmazynowy dla kosztów
+    val typeColor = if (isRevenue) MaterialTheme.colorScheme.primary else Color(0xFFE91E63)
     val typeIcon = if (isRevenue) Icons.Default.TrendingUp else Icons.Default.TrendingDown
 
     Card(
@@ -195,7 +192,6 @@ private fun InvoiceItem(invoice: Invoice, onClick: () -> Unit) {
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = invoice.buyerName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                // Koszty wyświetlamy z minusem dla czytelności
                 Text(
                     text = "${if (isRevenue) "" else "- "}${String.format("%,.2f", invoice.amount)} PLN",
                     style = MaterialTheme.typography.bodyMedium,

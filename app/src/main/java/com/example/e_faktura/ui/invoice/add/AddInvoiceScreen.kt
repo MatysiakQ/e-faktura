@@ -47,7 +47,7 @@ fun AddInvoiceScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        // ✅ SEKCJA: Wybór Typu (Przychód / Koszt)
+        // Wybór Typu (Przychód / Koszt)
         Text(
             text = "Typ dokumentu",
             style = MaterialTheme.typography.labelLarge,

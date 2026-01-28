@@ -45,7 +45,6 @@ object AppViewModelProvider {
             )
         }
 
-        // ✅ Szczegóły firmy - pobiera ID z trasy nawigacji
         initializer {
             CompanyDetailsViewModel(
                 savedStateHandle = this.createSavedStateHandle(),
@@ -80,8 +79,5 @@ object AppViewModelProvider {
     }
 }
 
-/**
- * Pomocnik do wyciągania instancji aplikacji.
- */
 fun CreationExtras.efakturaApplication(): EfakturaApplication =
     (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as EfakturaApplication)

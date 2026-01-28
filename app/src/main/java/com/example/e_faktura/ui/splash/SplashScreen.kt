@@ -22,7 +22,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun SplashScreen(
     navController: NavController,
-    // ✅ Używamy ręcznej fabryki zamiast Hilta
+    //Zmiana, bo zrezygnowalem z hilta
     authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val user by authViewModel.user.collectAsState()
