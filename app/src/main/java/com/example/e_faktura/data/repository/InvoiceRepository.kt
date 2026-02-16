@@ -67,7 +67,8 @@ class InvoiceRepository(
 
         val finalInvoice = invoice.copy(
             userId = currentUserId ?: "",
-            dueDate = automaticDueDate, // Automatyczny termin
+            // Użyj dueDate z faktury jeśli ustawiony, inaczej automatyczny (2 tygodnie)
+            dueDate = if (invoice.dueDate > 0) invoice.dueDate else automaticDueDate,
             isPaid = false
         )
 

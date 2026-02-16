@@ -49,7 +49,7 @@ fun InvoiceListScreen(
                             Column {
                                 // ✅ NAPRAWIONO: 'invoiceNumber' zamiast 'number'
                                 Text("Faktura nr: ${invoice.invoiceNumber}", fontWeight = FontWeight.Bold)
-                                Text("${String.format("%.2f", invoice.amount)} PLN")
+                                Text("${String.format("%.2f", if (invoice.grossAmount > 0) invoice.grossAmount else invoice.amount)} PLN")
                             }
                         }
                     }

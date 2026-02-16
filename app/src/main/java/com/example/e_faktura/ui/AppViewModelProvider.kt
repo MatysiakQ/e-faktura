@@ -68,7 +68,8 @@ object AppViewModelProvider {
         initializer {
             InvoiceDetailsViewModel(
                 savedStateHandle = this.createSavedStateHandle(),
-                invoiceRepository = efakturaApplication().container.invoiceRepository
+                invoiceRepository = efakturaApplication().container.invoiceRepository,
+                ksefRepository = efakturaApplication().container.ksefRepository
             )
         }
 
@@ -77,7 +78,8 @@ object AppViewModelProvider {
             InvoiceViewModel(
                 invoiceRepository = efakturaApplication().container.invoiceRepository,
                 companyRepository = efakturaApplication().container.companyRepository,
-                gusRepository = efakturaApplication().container.gusRepository
+                gusRepository = efakturaApplication().container.gusRepository,
+                ksefAuthManager = efakturaApplication().container.ksefRepository.authManager
             )
         }
 
