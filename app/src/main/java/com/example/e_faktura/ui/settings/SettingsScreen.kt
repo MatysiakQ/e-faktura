@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -47,9 +48,8 @@ fun SettingsScreen(
     isDarkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit
 ) {
-    // Dummy state for features to be implemented in ViewModel
     var selectedCurrency by remember { mutableStateOf("PLN") }
-    val appVersion = "1.0.0" // This would come from BuildConfig in a real app
+    val appVersion = "1.0.0"
 
     Scaffold(
         topBar = {
@@ -91,6 +91,15 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            SectionTitle("KSeF")
+            SettingsClickableItem(
+                title = "Połączenie z KSeF",
+                icon = Icons.Filled.Link,
+                onClick = { navController.navigate("ksef_setup") }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             SectionTitle("Informacje")
             SettingsTextItem(
                 title = "Wersja aplikacji",
@@ -100,7 +109,7 @@ fun SettingsScreen(
             SettingsClickableItem(
                 title = "Regulamin",
                 icon = Icons.Filled.Info,
-                onClick = { /* TODO: Navigate to Terms of Service screen or URL */ }
+                onClick = { }
             )
         }
     }
@@ -117,11 +126,14 @@ private fun SectionTitle(title: String) {
 }
 
 @Composable
-private fun SettingsSwitchItem(title: String, icon: ImageVector, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+private fun SettingsSwitchItem(
+    title: String,
+    icon: ImageVector,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -133,19 +145,21 @@ private fun SettingsSwitchItem(title: String, icon: ImageVector, checked: Boolea
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SettingsDropDownItem(title: String, icon: ImageVector, options: List<String>, selectedOption: String, onOptionSelected: (String) -> Unit) {
+private fun SettingsDropDownItem(
+    title: String,
+    icon: ImageVector,
+    options: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
-
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.width(16.dp))
         Text(text = title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        
         ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
             TextButton(onClick = { expanded = true }, modifier = Modifier.menuAnchor()) {
                 Text(selectedOption)
@@ -159,10 +173,7 @@ private fun SettingsDropDownItem(title: String, icon: ImageVector, options: List
                 options.forEach { option ->
                     DropdownMenuItem(
                         text = { Text(option) },
-                        onClick = {
-                            onOptionSelected(option)
-                            expanded = false
-                        }
+                        onClick = { onOptionSelected(option); expanded = false }
                     )
                 }
             }
@@ -173,9 +184,7 @@ private fun SettingsDropDownItem(title: String, icon: ImageVector, options: List
 @Composable
 private fun SettingsTextItem(title: String, icon: ImageVector, value: String) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -188,14 +197,16 @@ private fun SettingsTextItem(title: String, icon: ImageVector, value: String) {
 @Composable
 private fun SettingsClickableItem(title: String, icon: ImageVector, onClick: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.width(16.dp))
-        Text(text = title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold
+        )
     }
 }

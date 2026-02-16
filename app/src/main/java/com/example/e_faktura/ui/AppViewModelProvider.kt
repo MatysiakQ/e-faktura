@@ -14,13 +14,16 @@ import com.example.e_faktura.ui.dashboard.StatisticsViewModel
 import com.example.e_faktura.ui.invoice.add.InvoiceViewModel
 import com.example.e_faktura.ui.invoice.details.InvoiceDetailsViewModel
 import com.example.e_faktura.ui.invoice.list.InvoiceListViewModel
+import com.example.e_faktura.ui.ksef.KsefSetupViewModel
+import com.example.e_faktura.ui.settings.SettingsViewModel
 
 /**
  * Fabryka dostarczająca zależności do wszystkich ViewModeli.
  */
 object AppViewModelProvider {
     val Factory = viewModelFactory {
-        // Autoryzacja
+
+        // Autoryzacja Firebase
         initializer { AuthViewModel() }
 
         // Statystyki
@@ -45,7 +48,7 @@ object AppViewModelProvider {
             )
         }
 
-        // ✅ Szczegóły firmy - pobiera ID z trasy nawigacji
+        // Szczegóły firmy
         initializer {
             CompanyDetailsViewModel(
                 savedStateHandle = this.createSavedStateHandle(),
@@ -61,7 +64,7 @@ object AppViewModelProvider {
             )
         }
 
-        // Szczegóły faktury - pobiera ID z trasy nawigacji
+        // Szczegóły faktury
         initializer {
             InvoiceDetailsViewModel(
                 savedStateHandle = this.createSavedStateHandle(),
@@ -77,11 +80,20 @@ object AppViewModelProvider {
                 gusRepository = efakturaApplication().container.gusRepository
             )
         }
+
+        // ─── KSeF ─────────────────────────────────────────────────────────
+        initializer {
+            KsefSetupViewModel(
+                ksefRepository = efakturaApplication().container.ksefRepository
+            )
+        }
+
+        // Ustawienia
+        initializer {
+            SettingsViewModel(efakturaApplication())
+        }
     }
 }
 
-/**
- * Pomocnik do wyciągania instancji aplikacji.
- */
 fun CreationExtras.efakturaApplication(): EfakturaApplication =
     (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as EfakturaApplication)

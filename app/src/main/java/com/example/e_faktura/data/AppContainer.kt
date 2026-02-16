@@ -1,11 +1,14 @@
 package com.example.e_faktura.data
 
 import android.content.Context
+import com.example.e_faktura.data.api.RetrofitClient
+import com.example.e_faktura.data.ksef.KsefApiClient
+import com.example.e_faktura.data.ksef.KsefAuthManager
+import com.example.e_faktura.data.ksef.KsefRepository
 import com.example.e_faktura.data.local.AppDatabase
 import com.example.e_faktura.data.repository.CompanyRepository
 import com.example.e_faktura.data.repository.GusRepository
 import com.example.e_faktura.data.repository.InvoiceRepository
-import com.example.e_faktura.data.api.RetrofitClient // ✅ DODANO IMPORT
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -13,6 +16,7 @@ interface AppContainer {
     val companyRepository: CompanyRepository
     val invoiceRepository: InvoiceRepository
     val gusRepository: GusRepository
+    val ksefRepository: KsefRepository
 }
 
 class DefaultAppContainer(private val context: Context) : AppContainer {
@@ -33,7 +37,18 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val gusRepository: GusRepository by lazy {
-        // ✅ Teraz RetrofitClient będzie widoczny
         GusRepository(RetrofitClient.gusService)
+    }
+
+    // ─── KSeF ─────────────────────────────────────────────────────────────────
+    private val ksefAuthManager: KsefAuthManager by lazy {
+        KsefAuthManager(context)
+    }
+
+    override val ksefRepository: KsefRepository by lazy {
+        KsefRepository(
+            apiService = KsefApiClient.service,
+            authManager = ksefAuthManager
+        )
     }
 }

@@ -9,7 +9,7 @@ import com.example.e_faktura.model.Company
 import com.example.e_faktura.model.Invoice
 
 
-@Database(entities = [Company::class, Invoice::class], version = 6, exportSchema = false)
+@Database(entities = [Company::class, Invoice::class], version = 7, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun companyDao(): CompanyDao

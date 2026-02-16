@@ -15,21 +15,23 @@ class GusRepository(private val gusService: GusService) {
             val response = gusService.getCompanyData(cleanNip, today)
             val subject = response.result?.subject ?: return null
 
-            val fullAddress = subject.address ?: ""
+            // Użyj workingAddress, jeśli null to residenceAddress
+            val fullAddress = (subject.workingAddress ?: subject.residenceAddress)?.trim() ?: ""
 
-            // ✅ REGEX: Rozbija adres typu "ul. Prosta 49 00-838 Warszawa"
-            // Group 1: Ulica i numer, Group 2: Kod pocztowy, Group 3: Miasto
-            val regex = """^(.*)\s(\d{2}-\d{3})\s(.*)$""".toRegex()
+            android.util.Log.d("GUS_DEBUG", "Adres wybrany: $fullAddress")
+
+            val regex = """^(.*?),?\s*(\d{2}-\d{3})\s+(.+)$""".toRegex()
             val match = regex.find(fullAddress)
 
             GusData(
                 name = subject.name,
                 address = match?.groupValues?.get(1)?.trim() ?: fullAddress,
-                postalCode = match?.groupValues?.get(2) ?: "",
+                postalCode = match?.groupValues?.get(2)?.trim() ?: "",
                 city = match?.groupValues?.get(3)?.trim() ?: "",
-                bankAccount = subject.accountNumbers?.firstOrNull() // Pobieramy pierwsze konto
+                bankAccount = subject.accountNumbers?.firstOrNull()
             )
         } catch (e: Exception) {
+            android.util.Log.e("GUS_DEBUG", "Błąd: ${e.message}")
             e.printStackTrace()
             null
         }
