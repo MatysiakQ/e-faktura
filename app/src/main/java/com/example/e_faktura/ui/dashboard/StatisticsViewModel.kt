@@ -34,17 +34,24 @@ class StatisticsViewModel(
         loadStatistics()
     }
 
+
+    // Helper: używa grossAmount jeśli dostępne, inaczej amount (backward compatibility)
+    private fun Invoice.getAmount(): Double = if (grossAmount > 0) grossAmount else amount
+
     private fun loadStatistics() {
         viewModelScope.launch {
             invoiceRepository.getInvoices().collect { invoices ->
                 val now = LocalDate.now()
                 val monthName = now.month.getDisplayName(TextStyle.FULL, Locale("pl"))
 
-                val rev = invoices.filter { it.type == "PRZYCHOD" && it.isPaid }.sumOf { it.amount }
+                // ✅ POPRAWKA: Przychód (Revenue) liczymy TYLKO z OPŁACONYCH faktur
+                val rev = invoices.filter { it.type == "PRZYCHOD" && it.isPaid }.sumOf { it.getAmount() }
 
-                val cst = invoices.filter { it.type == "KOSZT" }.sumOf { it.amount }
+                // ✅ Koszty (KOSZT) - tutaj zazwyczaj liczy się wszystkie, aby widzieć zobowiązania
+                val cst = invoices.filter { it.type == "KOSZT" }.sumOf { it.getAmount() }
 
-                val pending = invoices.filter { it.type == "PRZYCHOD" && !it.isPaid }.sumOf { it.amount }
+                // ✅ Oczekujące (Pending) - sumujemy TYLKO NIEOPŁACONE faktury przychodowe
+                val pending = invoices.filter { it.type == "PRZYCHOD" && !it.isPaid }.sumOf { it.getAmount() }
 
                 // Filtrowanie przedawnionych (nieopłacone i po terminie)
                 val overdue = invoices.filter { invoice ->
@@ -65,7 +72,7 @@ class StatisticsViewModel(
                         vatBalance = (rev - cst) * 0.23,
                         pendingAmount = pending, // Teraz 20k trafi tutaj, a nie do revenue
                         overdueCount = overdue.size,
-                        overdueAmount = overdue.sumOf { it.amount },
+                        overdueAmount = overdue.sumOf { it.getAmount() },
                         currentMonth = "$monthName ${now.year}",
                         isLoading = false
                     )

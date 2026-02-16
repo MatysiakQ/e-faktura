@@ -5,8 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.auth.ktx.userProfileChangeRequest
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 import kotlinx.coroutines.channels.awaitClose
@@ -54,7 +54,9 @@ class AuthViewModel : ViewModel() {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val result = auth.createUserWithEmailAndPassword(email, pass).await()
-                val profileUpdates = userProfileChangeRequest { displayName = username }
+                val profileUpdates = UserProfileChangeRequest.Builder()
+                    .setDisplayName(username)
+                    .build()
                 result.user?.updateProfile(profileUpdates)?.await()
                 _uiState.update { it.copy(isLoading = false) }
                 onSuccess()
@@ -65,11 +67,13 @@ class AuthViewModel : ViewModel() {
         }
     }
 
+    @Suppress("DEPRECATION")
     fun changeEmail(newEmail: String) {
         viewModelScope.launch {
             val currentUser = auth.currentUser ?: return@launch
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
+                // Note: updateEmail jest deprecated, ale verifyBeforeUpdateEmail wymaga interakcji użytkownika
                 currentUser.updateEmail(newEmail).await()
                 _uiState.update { it.copy(isLoading = false, emailChangeSuccess = true) }
             } catch (e: Exception) {
@@ -99,7 +103,9 @@ class AuthViewModel : ViewModel() {
             try {
                 val storageRef = storage.reference.child("profile_pictures/${currentUser.uid}")
                 val downloadUrl = storageRef.putFile(uri).await().storage.downloadUrl.await()
-                val profileUpdates = userProfileChangeRequest { photoUri = downloadUrl }
+                val profileUpdates = UserProfileChangeRequest.Builder()
+                    .setPhotoUri(downloadUrl)
+                    .build()
                 currentUser.updateProfile(profileUpdates).await()
                 _uiState.update { it.copy(isLoading = false, profileUpdateSuccess = true) }
             } catch (e: Exception) {

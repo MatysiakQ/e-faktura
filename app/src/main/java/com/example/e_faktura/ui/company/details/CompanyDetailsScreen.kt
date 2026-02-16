@@ -60,6 +60,13 @@ fun CompanyDetailsScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { 
+                        uiState.company?.let { company ->
+                            navController.navigate("edit_company/${company.id}")
+                        }
+                    }) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edytuj")
+                    }
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Icon(Icons.Default.Delete, contentDescription = "Usuń", tint = MaterialTheme.colorScheme.error)
                     }

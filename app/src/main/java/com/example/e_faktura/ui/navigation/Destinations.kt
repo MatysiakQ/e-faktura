@@ -15,6 +15,7 @@ sealed class Screen(val route: String, val label: String? = null, val icon: Imag
     // ─── Operacje na danych ───────────────────────────────────────────────────
     object AddInvoice : Screen("add_invoice")
     object AddCompany : Screen("add_company")
+    object EditCompany : Screen("edit_company")
     object QrScanner : Screen("scan_qr")
 
     // ─── Ustawienia i konto ───────────────────────────────────────────────────
@@ -32,4 +33,4 @@ sealed class Screen(val route: String, val label: String? = null, val icon: Imag
 }
 
 /** Elementy wyświetlane w dolnym pasku nawigacji */
-val bottomNavItems = listOf(Screen.Home, Screen.Companies)
+val bottomNavItems = listOf(Screen.Home, Screen.Companies, Screen.Statistics)

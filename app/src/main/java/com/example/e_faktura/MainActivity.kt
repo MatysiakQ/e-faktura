@@ -40,6 +40,7 @@ import com.example.e_faktura.ui.auth.LoginScreen
 import com.example.e_faktura.ui.auth.RegistrationScreen
 import com.example.e_faktura.ui.company.add.AddCompanyScreen
 import com.example.e_faktura.ui.company.details.CompanyDetailsScreen
+import com.example.e_faktura.ui.company.edit.EditCompanyScreen
 import com.example.e_faktura.ui.company.list.CompanyListScreen
 import com.example.e_faktura.ui.core.SplashScreen
 import com.example.e_faktura.ui.dashboard.StatisticsScreen
@@ -186,6 +187,7 @@ fun AppScaffold(
             || currentRoute == Screen.Settings.route
             || currentRoute == Screen.KsefSetup.route
             || currentRoute?.startsWith("company_details/") == true
+            || currentRoute?.startsWith("edit_company/") == true
             || currentRoute?.startsWith("invoice_details/") == true
             || currentRoute == "account"
 
@@ -320,6 +322,12 @@ fun AppScaffold(
                 arguments = listOf(navArgument("companyId") { type = NavType.StringType })
             ) {
                 CompanyDetailsScreen(navController = navController)
+            }
+            composable(
+                route = "edit_company/{companyId}",
+                arguments = listOf(navArgument("companyId") { type = NavType.StringType })
+            ) {
+                EditCompanyScreen(navController = navController)
             }
             composable(
                 route = "invoice_details/{invoiceId}",

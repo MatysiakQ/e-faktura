@@ -86,9 +86,11 @@ fun InvoiceDashboardScreen(
 fun RevenueCard(invoices: List<Invoice>, onDetailsClick: () -> Unit) {
     var balanceVisible by rememberSaveable { mutableStateOf(false) }
 
+    // ✅ KLUCZOWA ZMIANA: Dodano warunek && it.isPaid
+    // Teraz sumujemy tylko te przychody, które zostały faktycznie opłacone.
     val totalRevenue = invoices.filter {
         (it.type == "PRZYCHOD" || it.type == "") && it.isPaid
-    }.sumOf { it.amount }
+    }.sumOf { if (it.grossAmount > 0) it.grossAmount else it.amount }
 
     val balanceText = if (balanceVisible) String.format("%,.2f", totalRevenue) else "•••••"
 
@@ -110,7 +112,7 @@ fun RevenueCard(invoices: List<Invoice>, onDetailsClick: () -> Unit) {
                 .padding(24.dp)
         ) {
             Text(
-                text = "Zrealizowany Przychód (Opłacone)",
+                text = "Zrealizowany Przychód (Opłacone)", // ✅ Zmieniono etykietę dla jasności
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
             )
@@ -164,7 +166,7 @@ fun RevenueCard(invoices: List<Invoice>, onDetailsClick: () -> Unit) {
 @Composable
 private fun InvoiceItem(invoice: Invoice, onClick: () -> Unit) {
     val status = invoice.getStatus()
-    val isRevenue = invoice.type == "PRZYCHOD" || invoice.type == ""
+    val isRevenue = invoice.type == "PRZYCHOD" || invoice.type == "" // ✅ Rozróżnienie typu
 
     val (statusText, statusColor) = when(status) {
         InvoiceStatus.PAID -> "Zapłacono" to Color(0xFF4CAF50)
@@ -172,7 +174,8 @@ private fun InvoiceItem(invoice: Invoice, onClick: () -> Unit) {
         InvoiceStatus.OVERDUE -> "PRZEDAWNIONA" to MaterialTheme.colorScheme.error
     }
 
-    val typeColor = if (isRevenue) MaterialTheme.colorScheme.primary else Color(0xFFE91E63)
+    // ✅ Kolorystyka i ikona zależna od typu (Przychód/Koszt)
+    val typeColor = if (isRevenue) MaterialTheme.colorScheme.primary else Color(0xFFE91E63) // Różowy/Karmazynowy dla kosztów
     val typeIcon = if (isRevenue) Icons.Default.TrendingUp else Icons.Default.TrendingDown
 
     Card(
@@ -192,8 +195,9 @@ private fun InvoiceItem(invoice: Invoice, onClick: () -> Unit) {
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = invoice.buyerName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                // Koszty wyświetlamy z minusem dla czytelności
                 Text(
-                    text = "${if (isRevenue) "" else "- "}${String.format("%,.2f", invoice.amount)} PLN",
+                    text = "${if (isRevenue) "" else "- "}${String.format("%,.2f", if (invoice.grossAmount > 0) invoice.grossAmount else invoice.amount)} PLN",
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (isRevenue) MaterialTheme.colorScheme.onSurfaceVariant else Color.Red
                 )
