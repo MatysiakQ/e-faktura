@@ -20,7 +20,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -45,46 +44,53 @@ import com.example.e_faktura.ui.company.list.CompanyListScreen
 import com.example.e_faktura.ui.core.SplashScreen
 import com.example.e_faktura.ui.dashboard.StatisticsScreen
 import com.example.e_faktura.ui.invoice.add.AddInvoiceScreen
-import com.example.e_faktura.ui.invoice.list.InvoiceDashboardScreen
 import com.example.e_faktura.ui.invoice.details.InvoiceDetailsScreen
+import com.example.e_faktura.ui.invoice.list.InvoiceDashboardScreen
+import com.example.e_faktura.ui.ksef.KsefSetupScreen
 import com.example.e_faktura.ui.navigation.Screen
 import com.example.e_faktura.ui.navigation.bottomNavItems
+import com.example.e_faktura.ui.settings.SettingsScreen
+import com.example.e_faktura.ui.settings.SettingsViewModel
 import com.example.e_faktura.ui.theme.EfakturaTheme
 
 class MainActivity : ComponentActivity() {
 
-    private lateinit var networkReceiver: NetworkChangeReceiver //
-    private var isNetworkAvailable = mutableStateOf(true) //
+    private lateinit var networkReceiver: NetworkChangeReceiver
+    private var isNetworkAvailable = mutableStateOf(true)
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-    }
+    ) { /* Wynik uprawnienia — obsłużony przez system */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Prośba o uprawnienia do powiadomień
         checkNotificationPermission()
 
-        val syncIntent = Intent(this, SyncService::class.java) //
-        startService(syncIntent) //
+        val syncIntent = Intent(this, SyncService::class.java)
+        startService(syncIntent)
 
         networkReceiver = NetworkChangeReceiver { isOnline ->
-            isNetworkAvailable.value = isOnline //
+            isNetworkAvailable.value = isOnline
         }
 
         enableEdgeToEdge()
         setContent {
-            EfakturaTheme {
+            // SettingsViewModel zarządza motywem (jasny/ciemny)
+            val settingsViewModel: SettingsViewModel = viewModel()
+            val isDarkTheme by settingsViewModel.isDarkTheme.collectAsState()
+
+            EfakturaTheme(darkTheme = isDarkTheme) {
                 val rootNavController = rememberNavController()
 
                 Surface(modifier = Modifier.fillMaxSize()) {
                     Column {
-                        if (!isNetworkAvailable.value) { //
+                        // Baner braku internetu
+                        if (!isNetworkAvailable.value) {
                             Card(
                                 modifier = Modifier.fillMaxWidth().padding(top = 40.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer
+                                )
                             ) {
                                 Row(
                                     modifier = Modifier.padding(8.dp).fillMaxWidth(),
@@ -96,18 +102,29 @@ class MainActivity : ComponentActivity() {
                                     Text(
                                         "BRAK INTERNETU - TRYB OFFLINE",
                                         color = MaterialTheme.colorScheme.error,
-                                        style = MaterialTheme.typography.labelSmall
+                                        style = MaterialTheme.typography.labelSmall,
+                                        textAlign = TextAlign.Center
                                     )
                                 }
                             }
                         }
 
-                        // Główny NavHost aplikacji
                         NavHost(navController = rootNavController, startDestination = Screen.Splash.route) {
-                            composable(Screen.Splash.route) { SplashScreen(navController = rootNavController) }
-                            composable(Screen.MainApp.route) { AppScaffold(rootNavController = rootNavController) }
-                            composable(Screen.Login.route) { LoginScreen(navController = rootNavController) }
-                            composable(Screen.Register.route) { RegistrationScreen(navController = rootNavController) }
+                            composable(Screen.Splash.route) {
+                                SplashScreen(navController = rootNavController)
+                            }
+                            composable(Screen.MainApp.route) {
+                                AppScaffold(
+                                    rootNavController = rootNavController,
+                                    settingsViewModel = settingsViewModel
+                                )
+                            }
+                            composable(Screen.Login.route) {
+                                LoginScreen(navController = rootNavController)
+                            }
+                            composable(Screen.Register.route) {
+                                RegistrationScreen(navController = rootNavController)
+                            }
                         }
                     }
                 }
@@ -117,7 +134,10 @@ class MainActivity : ComponentActivity() {
 
     private fun checkNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            if (ContextCompat.checkSelfPermission(
+                    this, Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
@@ -125,23 +145,28 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        @Suppress("DEPRECATION")
         val filter = IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
-        registerReceiver(networkReceiver, filter) //
+        registerReceiver(networkReceiver, filter)
     }
 
     override fun onPause() {
         super.onPause()
-        unregisterReceiver(networkReceiver) //
+        unregisterReceiver(networkReceiver)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppScaffold(rootNavController: NavHostController) {
+fun AppScaffold(
+    rootNavController: NavHostController,
+    settingsViewModel: SettingsViewModel
+) {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val user by authViewModel.user.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
+    val isDarkTheme by settingsViewModel.isDarkTheme.collectAsState()
 
     // Automatyczny powrót do logowania po wylogowaniu
     LaunchedEffect(user) {
@@ -158,6 +183,8 @@ fun AppScaffold(rootNavController: NavHostController) {
 
     val isFullScreenRoute = currentRoute == Screen.AddCompany.route
             || currentRoute == Screen.AddInvoice.route
+            || currentRoute == Screen.Settings.route
+            || currentRoute == Screen.KsefSetup.route
             || currentRoute?.startsWith("company_details/") == true
             || currentRoute?.startsWith("invoice_details/") == true
             || currentRoute == "account"
@@ -174,13 +201,30 @@ fun AppScaffold(rootNavController: NavHostController) {
                         Text(if (isLoggedIn) "Witaj, $userDisplayName" else "Witaj, Gościu")
                     },
                     actions = {
-                        IconButton(onClick = { showMenu = !showMenu }) { Icon(Icons.Default.MoreVert, "Menu") }
+                        IconButton(onClick = { showMenu = !showMenu }) {
+                            Icon(Icons.Default.MoreVert, "Menu")
+                        }
                         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                             if (isLoggedIn) {
-                                DropdownMenuItem(text = { Text("Moje Konto") }, onClick = { showMenu = false; navController.navigate("account") })
-                                DropdownMenuItem(text = { Text("Wyloguj") }, onClick = { showMenu = false; authViewModel.logout() })
+                                DropdownMenuItem(
+                                    text = { Text("Moje Konto") },
+                                    onClick = { showMenu = false; navController.navigate("account") }
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text("Ustawienia") },
+                                onClick = { showMenu = false; navController.navigate(Screen.Settings.route) }
+                            )
+                            if (isLoggedIn) {
+                                DropdownMenuItem(
+                                    text = { Text("Wyloguj") },
+                                    onClick = { showMenu = false; authViewModel.logout() }
+                                )
                             } else {
-                                DropdownMenuItem(text = { Text("Zaloguj") }, onClick = { rootNavController.navigate(Screen.Login.route); showMenu = false })
+                                DropdownMenuItem(
+                                    text = { Text("Zaloguj") },
+                                    onClick = { rootNavController.navigate(Screen.Login.route); showMenu = false }
+                                )
                             }
                         }
                     }
@@ -204,7 +248,8 @@ fun AppScaffold(rootNavController: NavHostController) {
                         NavigationBarItem(
                             icon = { Icon(screen.icon!!, null) },
                             label = { Text(screen.label!!) },
-                            selected = navBackStackEntry?.destination?.hierarchy?.any { it.route == screen.route } == true,
+                            selected = navBackStackEntry?.destination?.hierarchy
+                                ?.any { it.route == screen.route } == true,
                             onClick = {
                                 navController.navigate(screen.route) {
                                     popUpTo(navController.graph.findStartDestination().id) { saveState = true }
@@ -218,28 +263,64 @@ fun AppScaffold(rootNavController: NavHostController) {
             }
         }
     ) { innerPadding ->
-        NavHost(navController = navController, startDestination = Screen.Home.route, modifier = Modifier.padding(innerPadding)) {
-            composable(Screen.Home.route) { InvoiceDashboardScreen(navController = navController) }
-            composable(Screen.Companies.route) { CompanyListScreen(navController = navController) }
+        NavHost(
+            navController = navController,
+            startDestination = Screen.Home.route,
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            composable(Screen.Home.route) {
+                InvoiceDashboardScreen(navController = navController)
+            }
+            composable(Screen.Companies.route) {
+                CompanyListScreen(navController = navController)
+            }
             composable(Screen.Statistics.route) {
-                StatisticsScreen(navController = navController, statisticsViewModel = viewModel(factory = AppViewModelProvider.Factory), onOverdueClick = {})
+                StatisticsScreen(
+                    navController = navController,
+                    statisticsViewModel = viewModel(factory = AppViewModelProvider.Factory),
+                    onOverdueClick = {}
+                )
             }
-            composable(Screen.AddCompany.route) { AddCompanyScreen(navController = navController) }
-            composable(Screen.AddInvoice.route) { AddInvoiceScreen(navController = navController, onInvoiceAdded = { navController.popBackStack() }) }
-            composable("account") { MyAccountScreen(navController = navController) }
-
+            composable(Screen.AddCompany.route) {
+                AddCompanyScreen(navController = navController)
+            }
+            composable(Screen.AddInvoice.route) {
+                AddInvoiceScreen(
+                    navController = navController,
+                    onInvoiceAdded = { navController.popBackStack() }
+                )
+            }
+            composable("account") {
+                MyAccountScreen(navController = navController)
+            }
+            // ─── Ustawienia ────────────────────────────────────────────────
+            composable(Screen.Settings.route) {
+                SettingsScreen(
+                    navController = navController,
+                    isDarkTheme = isDarkTheme,
+                    onThemeChange = { settingsViewModel.setDarkTheme(it) }
+                )
+            }
+            // ─── KSeF Setup ────────────────────────────────────────────────
+            composable(Screen.KsefSetup.route) {
+                KsefSetupScreen(navController = navController)
+            }
             composable(Screen.QrScanner.route) {
-                QrCodeScannerScreen(navController = navController, onQrCodeScanned = { scannedNip ->
-                    navController.previousBackStackEntry?.savedStateHandle?.set("scannedNip", scannedNip)
-                    navController.popBackStack()
-                })
+                QrCodeScannerScreen(
+                    navController = navController,
+                    onQrCodeScanned = { scannedNip ->
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle?.set("scannedNip", scannedNip)
+                        navController.popBackStack()
+                    }
+                )
             }
-
             composable(
                 route = "company_details/{companyId}",
                 arguments = listOf(navArgument("companyId") { type = NavType.StringType })
-            ) { CompanyDetailsScreen(navController = navController) }
-
+            ) {
+                CompanyDetailsScreen(navController = navController)
+            }
             composable(
                 route = "invoice_details/{invoiceId}",
                 arguments = listOf(navArgument("invoiceId") { type = NavType.StringType })

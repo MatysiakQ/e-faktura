@@ -47,7 +47,7 @@ fun InvoiceListScreen(
                             Spacer(Modifier.width(16.dp))
                             Column {
                                 Text("Faktura nr: ${invoice.invoiceNumber}", fontWeight = FontWeight.Bold)
-                                Text("${String.format("%.2f", invoice.amount)} PLN")
+                                Text("${String.format("%.2f", if (invoice.grossAmount > 0) invoice.grossAmount else invoice.amount)} PLN")
                             }
                         }
                     }

@@ -114,4 +114,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest) // ✅ Poprawione (tu był błąd 'manifest')
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("com.squareup.retrofit2:converter-scalars:2.9.0")
+
+    // Bezpieczne przechowywanie danych (EncryptedSharedPreferences)
+    implementation("androidx.security:security-crypto:1.0.0")
 }
