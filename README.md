@@ -1,33 +1,26 @@
-# e-faktura 📄💰
-
-[![Status](https://img.shields.io/badge/Status-Closed-red)](https://github.com/MatysiakQ/e-faktura)
-[![Tech](https://img.shields.io/badge/Stack-PHP%20%7C%20MySQL%20%7C%20HTML%20%7C%20CSS-blue)](https://github.com/MatysiakQ/e-faktura)
-
-## 📝 O Projekcie
-**e-faktura** to aplikacja webowa służąca do kompleksowego zarządzania procesem fakturowania w firmie. System pozwala na szybkie wystawianie dokumentów sprzedażowych, zarządzanie bazą klientów oraz automatyczne generowanie profesjonalnych plików PDF.
-
-## 🛠️ Stos Technologiczny
-- **Backend:** PHP (logika biznesowa, obliczenia VAT).
-- **Baza danych:** MySQL (przechowywanie kontrahentów i historii faktur).
-- **Frontend:** HTML5, CSS3 (responsywny interfejs).
-- **Biblioteki:** PDF Generator (FPDF/TCPDF lub pokrewne).
-
-## ✨ Główne Funkcjonalności
-- **Generator PDF:** Automatyczne tworzenie dokumentów gotowych do wysyłki e-mailem lub druku.
-- **Baza Kontrahentów:** Zarządzanie danymi klientów (NIP, adresy, dane kontaktowe).
-- **Zarządzanie Produktami:** Katalog towarów i usług z predefiniowanymi stawkami VAT.
-- **Automatyzacja Obliczeń:** System sam wylicza sumy netto, kwoty podatku oraz wartości brutto.
-- **Walidacja danych:** Sprawdzanie poprawności numerów NIP i terminów płatności.
-
-## 🚀 Uruchomienie
-1. Sklonuj repozytorium:
-   ```bash
-   git clone [https://github.com/MatysiakQ/e-faktura.git](https://github.com/MatysiakQ/e-faktura.git)
-Skonfiguruj bazę danych MySQL przy użyciu dołączonego pliku .sql.
-
-Skonfiguruj dane połączenia w pliku konfiguracyjnym (np. config.php).
-
-Uruchom projekt na serwerze obsługującym PHP (np. XAMPP, Apache).
-
-👥 Autor
-MatysiakQ - GitHub Profile
+E-Faktura 📑 – Twoje Centrum Finansów
+Aplikacja mobilna na system Android ułatwiająca życie przedsiębiorcy. Pozwala na błyskawiczne wystawianie faktur, zarządzanie bazą kontrahentów oraz generowanie dokumentów PDF zgodnie z polskimi standardami księgowymi.
+🚀 Kluczowe Funkcje
+ * Integracja z Białą Listą Ministerstwa Finansów: Zapomnij o ręcznym wpisywaniu danych. Aplikacja pobiera nazwę firmy, adres i numer konta prosto z oficjalnych baz państwowych po wpisaniu NIP.
+ * Inteligentny Parser Adresów: Dzięki autorskiemu rozwiązaniu opartemu na wyrażeniach regularnych (Regex), aplikacja automatycznie rozdziela pobrany ciąg adresowy na ulicę, kod pocztowy i miasto.
+ * Profesjonalny Generator PDF: Twórz dokumenty faktur w formacie PDF jednym kliknięciem. Dokumenty są gotowe do wysyłki bezpośrednio z aplikacji.
+ * Zarządzanie Kosztami i Przychodami: Rozróżnienie faktur sprzedażowych i zakupowych wraz z dynamicznym systemem etykietowania (Nabywca/Sprzedawca).
+ * Dashboard Finansowy: Śledzenie realnego przychodu (tylko opłacone faktury), kosztów oraz faktur oczekujących na zapłatę.
+🛠️ Stack Technologiczny
+ * Język: Kotlin
+ * UI: Jetpack Compose (Modern Declarative UI)
+ * Architektura: MVVM (Model-View-ViewModel) z wykorzystaniem StateFlow i SharedFlow do komunikacji UI
+ * Sieć: Retrofit + Gson (obsługa API MF)
+ * Baza Danych: Room (lokalne przechowywanie danych) + Firebase Firestore (synchronizacja w chmurze)
+ * Przechowywanie Plików: FileProvider do bezpiecznego udostępniania wygenerowanych PDF-ów
+🔧 Instalacja i Konfiguracja
+ * Klonowanie repozytorium: git clone https://github.com/MatysiakQ/e-faktura.git
+ * Firebase: Dodaj swój plik google-services.json do folderu app/.
+ * Biała Lista MF: Aplikacja korzysta z publicznego API pod adresem https://wl-api.mf.gov.pl/. Nie wymaga dodatkowych kluczy dla zapytań o NIP.
+ * Budowa: Zrób Sync Project with Gradle Files i uruchom na emulatorze lub fizycznym urządzeniu.
+📂 Struktura Projektu
+ * ui/: Komponenty Compose, ekrany oraz ViewModele obsługujące logikę UI.
+ * data/: Repozytoria, definicje API i kontenery wstrzykiwania zależności.
+ * model/: Definicje obiektów biznesowych i struktur odpowiedzi z API.
+ * utils/: Narzędzia pomocnicze, w tym silnik generowania PDF.
+> Notatka techniczna: Aplikacja implementuje bezpieczne zarządzanie zasobami poprzez system FileProvider, co pozwala na generowanie plików PDF w pamięci cache bez zaśmiecania pamięci użytkownika.
