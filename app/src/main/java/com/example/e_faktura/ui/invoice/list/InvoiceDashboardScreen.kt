@@ -67,6 +67,7 @@ fun InvoiceDashboardScreen(
             SearchBar(
                 query = uiState.searchQuery,
                 onQueryChange = { invoiceViewModel.updateSearch(it) },
+                onSearch = { searchActive = false },
                 active = searchActive,
                 onActiveChange = { searchActive = it },
                 placeholder = { Text("Szukaj: nabywca, NIP, numer...") },
@@ -299,9 +300,7 @@ fun InvoiceItem(invoice: Invoice, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    "${if (isRevenue) "" else "- "}${
-                        String.format("%,.2f", if (invoice.grossAmount > 0) invoice.grossAmount else invoice.amount)
-                    } PLN",
+                    "${if (isRevenue) "" else "- "}${String.format("%,.2f", if (invoice.grossAmount > 0) invoice.grossAmount else invoice.amount)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (isRevenue) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFFE91E63)
                 )
