@@ -41,6 +41,7 @@ import com.example.e_faktura.ui.auth.RegistrationScreen
 import com.example.e_faktura.ui.company.add.AddCompanyScreen
 import com.example.e_faktura.ui.company.details.CompanyDetailsScreen
 import com.example.e_faktura.ui.company.edit.EditCompanyScreen
+import com.example.e_faktura.ui.invoice.edit.EditInvoiceScreen
 import com.example.e_faktura.ui.company.list.CompanyListScreen
 import com.example.e_faktura.ui.core.SplashScreen
 import com.example.e_faktura.ui.dashboard.StatisticsScreen
@@ -188,6 +189,7 @@ fun AppScaffold(
             || currentRoute == Screen.KsefSetup.route
             || currentRoute?.startsWith("company_details/") == true
             || currentRoute?.startsWith("edit_company/") == true
+            || currentRoute?.startsWith("edit_invoice/") == true
             || currentRoute?.startsWith("invoice_details/") == true
             || currentRoute == "account"
 
@@ -280,7 +282,11 @@ fun AppScaffold(
                 StatisticsScreen(
                     navController = navController,
                     statisticsViewModel = viewModel(factory = AppViewModelProvider.Factory),
-                    onOverdueClick = {}
+                    onOverdueClick = {
+                        navController.navigate(Screen.Home.route) {
+                            launchSingleTop = true
+                        }
+                    }
                 )
             }
             composable(Screen.AddCompany.route) {
@@ -328,6 +334,12 @@ fun AppScaffold(
                 arguments = listOf(navArgument("companyId") { type = NavType.StringType })
             ) {
                 EditCompanyScreen(navController = navController)
+            }
+            composable(
+                route = "edit_invoice/{invoiceId}",
+                arguments = listOf(navArgument("invoiceId") { type = NavType.StringType })
+            ) {
+                EditInvoiceScreen(navController = navController)
             }
             composable(
                 route = "invoice_details/{invoiceId}",

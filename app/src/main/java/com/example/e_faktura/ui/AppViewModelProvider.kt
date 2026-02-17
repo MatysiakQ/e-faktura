@@ -8,10 +8,12 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.e_faktura.EfakturaApplication
 import com.example.e_faktura.ui.auth.AuthViewModel
 import com.example.e_faktura.ui.company.add.CompanyFormViewModel
+import com.example.e_faktura.ui.company.edit.EditCompanyViewModel
 import com.example.e_faktura.ui.company.details.CompanyDetailsViewModel
 import com.example.e_faktura.ui.company.list.CompanyListViewModel
 import com.example.e_faktura.ui.dashboard.StatisticsViewModel
 import com.example.e_faktura.ui.invoice.add.InvoiceViewModel
+import com.example.e_faktura.ui.invoice.edit.EditInvoiceViewModel
 import com.example.e_faktura.ui.invoice.details.InvoiceDetailsViewModel
 import com.example.e_faktura.ui.invoice.list.InvoiceListViewModel
 import com.example.e_faktura.ui.ksef.KsefSetupViewModel
@@ -56,6 +58,15 @@ object AppViewModelProvider {
             )
         }
 
+        // Edycja firmy
+        initializer {
+            EditCompanyViewModel(
+                savedStateHandle = this.createSavedStateHandle(),
+                companyRepository = efakturaApplication().container.companyRepository,
+                gusRepository = efakturaApplication().container.gusRepository
+            )
+        }
+
         // Lista faktur
         initializer {
             InvoiceListViewModel(
@@ -70,6 +81,14 @@ object AppViewModelProvider {
                 savedStateHandle = this.createSavedStateHandle(),
                 invoiceRepository = efakturaApplication().container.invoiceRepository,
                 ksefRepository = efakturaApplication().container.ksefRepository
+            )
+        }
+
+        // Edycja faktury
+        initializer {
+            EditInvoiceViewModel(
+                savedStateHandle = this.createSavedStateHandle(),
+                invoiceRepository = efakturaApplication().container.invoiceRepository
             )
         }
 

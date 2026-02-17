@@ -26,6 +26,19 @@ class CompanyRepository(
         }
     }
 
+    // ✅ NOWA FUNKCJA: Usuwanie firmy z Chmury i Lokalnie
+    suspend fun updateCompany(company: Company) {
+        val userId = firebaseAuth.currentUser?.uid
+        companyDao.update(company)
+        if (userId != null) {
+            try {
+                firestore.collection("companies").document(company.id).set(company).await()
+            } catch (e: Exception) {
+                // Lokalnie zapisano, Firebase sync po połączeniu
+            }
+        }
+    }
+
     suspend fun deleteCompany(company: Company) {
         try {
             // Usuwamy z Firestore

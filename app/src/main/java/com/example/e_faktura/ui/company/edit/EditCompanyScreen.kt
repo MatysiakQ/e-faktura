@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.example.e_faktura.ui.company.edit
 
 import android.net.Uri
@@ -37,17 +39,14 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.e_faktura.model.IconType
 import com.example.e_faktura.ui.AppViewModelProvider
-import com.example.e_faktura.ui.company.add.CompanyFormViewModel
-import com.example.e_faktura.ui.company.add.UiEvent
 import com.example.e_faktura.ui.components.IconPickerDialog
 import com.example.e_faktura.ui.components.IconProvider
 import kotlinx.coroutines.flow.collectLatest
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditCompanyScreen(
     navController: NavController,
-    viewModel: CompanyFormViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    viewModel: EditCompanyViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -56,19 +55,17 @@ fun EditCompanyScreen(
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
-        if (uri != null) {
-            viewModel.updateIcon("CUSTOM:$uri")
-        }
+        if (uri != null) viewModel.updateIcon("CUSTOM:$uri")
     }
 
-    LaunchedEffect(key1 = true) {
-        viewModel.uiEvent.collectLatest { event ->
+    LaunchedEffect(Unit) {
+        viewModel.events.collectLatest { event ->
             when (event) {
-                UiEvent.SaveSuccess -> {
-                    Toast.makeText(context, "Zmiany zapisane pomyślnie!", Toast.LENGTH_SHORT).show()
+                EditCompanyEvent.SaveSuccess -> {
+                    Toast.makeText(context, "Zmiany zapisane!", Toast.LENGTH_SHORT).show()
                     navController.popBackStack()
                 }
-                is UiEvent.ShowError -> {
+                is EditCompanyEvent.ShowError -> {
                     Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
                 }
             }
@@ -94,119 +91,200 @@ fun EditCompanyScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Edytuj dane firmy", fontWeight = FontWeight.Bold) },
+                title = { Text("Edytuj firmę", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Wróć")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Wróć")
                     }
                 }
             )
         }
-    ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp)
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Spacer(Modifier.height(16.dp))
-
-                CompanyAvatar(iconString = state.icon, onClick = { showIconPicker = true })
-
-                Spacer(Modifier.height(24.dp))
-
-                OutlinedTextField(
-                    value = state.nip,
-                    onValueChange = { viewModel.updateNip(it) },
-                    label = { Text("NIP") },
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = state.error?.contains("NIP") == true,
-                    supportingText = {
-                        if (state.error?.contains("NIP") == true) Text(state.error!!, color = MaterialTheme.colorScheme.error)
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Search),
-                    trailingIcon = {
-                        IconButton(onClick = { viewModel.loadDataFromNip(state.nip) }) {
-                            Icon(Icons.Default.Search, contentDescription = "Szukaj w GUS")
-                        }
-                    },
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = state.name,
-                    onValueChange = { viewModel.updateName(it) },
-                    label = { Text("Pełna nazwa firmy") },
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = state.error?.contains("Nazwa") == true,
-                    supportingText = {
-                        if (state.error?.contains("Nazwa") == true) Text(state.error!!, color = MaterialTheme.colorScheme.error)
-                    },
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = state.address,
-                    onValueChange = { viewModel.updateAddress(it) },
-                    label = { Text("Ulica i numer") },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 2,
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = state.ownerFullName,
-                    onValueChange = { viewModel.updateOwner(it) },
-                    label = { Text("Właściciel / Reprezentant") },
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = state.bankAccount,
-                    onValueChange = { viewModel.updateBankAccount(it) },
-                    label = { Text("Numer konta bankowego") },
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                Spacer(Modifier.height(32.dp))
-
-                Button(
-                    onClick = { viewModel.saveCompany() },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    enabled = !state.isLoading,
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Text("ZAPISZ ZMIANY", fontWeight = FontWeight.Bold)
+    ) { padding ->
+        when {
+            state.isLoading -> {
+                Box(Modifier.fillMaxSize().padding(padding), Alignment.Center) {
+                    CircularProgressIndicator()
                 }
-
-                Spacer(Modifier.height(40.dp))
             }
+            state.notFound -> {
+                Box(Modifier.fillMaxSize().padding(padding), Alignment.Center) {
+                    Text("Nie znaleziono firmy", color = MaterialTheme.colorScheme.error)
+                }
+            }
+            else -> {
+                Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp)
+                            .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Spacer(Modifier.height(16.dp))
 
-            if (state.isLoading) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter))
+                        EditCompanyAvatar(
+                            iconString = state.icon,
+                            onClick = { showIconPicker = true }
+                        )
+
+                        Spacer(Modifier.height(24.dp))
+
+                        // NIP + przycisk GUS
+                        OutlinedTextField(
+                            value = state.nip,
+                            onValueChange = { viewModel.updateNip(it) },
+                            label = { Text("NIP") },
+                            modifier = Modifier.fillMaxWidth(),
+                            isError = state.error?.contains("NIP") == true,
+                            supportingText = {
+                                if (state.error?.contains("NIP") == true)
+                                    Text(state.error!!, color = MaterialTheme.colorScheme.error)
+                            },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Search
+                            ),
+                            trailingIcon = {
+                                IconButton(onClick = { viewModel.fetchFromGus() }) {
+                                    Icon(Icons.Default.Search, "Odśwież z GUS")
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // Nazwa firmy
+                        OutlinedTextField(
+                            value = state.name,
+                            onValueChange = { viewModel.updateName(it) },
+                            label = { Text("Pełna nazwa firmy") },
+                            modifier = Modifier.fillMaxWidth(),
+                            isError = state.error?.contains("nazwa", true) == true,
+                            supportingText = {
+                                if (state.error?.contains("nazwa", true) == true)
+                                    Text(state.error!!, color = MaterialTheme.colorScheme.error)
+                            },
+                            keyboardOptions = KeyboardOptions(
+                                capitalization = KeyboardCapitalization.Words,
+                                imeAction = ImeAction.Next
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // Adres
+                        OutlinedTextField(
+                            value = state.address,
+                            onValueChange = { viewModel.updateAddress(it) },
+                            label = { Text("Ulica i numer") },
+                            modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(
+                                capitalization = KeyboardCapitalization.Sentences,
+                                imeAction = ImeAction.Next
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // Kod pocztowy + Miasto
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            OutlinedTextField(
+                                value = state.postalCode,
+                                onValueChange = { viewModel.updatePostalCode(it) },
+                                label = { Text("Kod") },
+                                modifier = Modifier.weight(0.4f),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            OutlinedTextField(
+                                value = state.city,
+                                onValueChange = { viewModel.updateCity(it) },
+                                label = { Text("Miasto") },
+                                modifier = Modifier.weight(0.6f),
+                                keyboardOptions = KeyboardOptions(
+                                    capitalization = KeyboardCapitalization.Words,
+                                    imeAction = ImeAction.Next
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // Właściciel
+                        OutlinedTextField(
+                            value = state.ownerFullName,
+                            onValueChange = { viewModel.updateOwner(it) },
+                            label = { Text("Właściciel / Reprezentant") },
+                            modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(
+                                capitalization = KeyboardCapitalization.Words,
+                                imeAction = ImeAction.Next
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // Konto bankowe
+                        OutlinedTextField(
+                            value = state.bankAccount,
+                            onValueChange = { viewModel.updateBankAccount(it) },
+                            label = { Text("Numer konta bankowego") },
+                            modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Done
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        // Błąd ogólny
+                        if (state.error != null && !state.error!!.contains("NIP") && !state.error!!.contains("nazwa", true)) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = state.error!!,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+
+                        Spacer(Modifier.height(32.dp))
+
+                        Button(
+                            onClick = { viewModel.saveChanges() },
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            enabled = !state.isSaving,
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            if (state.isSaving) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text("ZAPISZ ZMIANY", fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        Spacer(Modifier.height(40.dp))
+                    }
+
+                    if (state.isSaving) {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter))
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun CompanyAvatar(iconString: String, onClick: () -> Unit) {
+private fun EditCompanyAvatar(iconString: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(110.dp)
@@ -228,29 +306,15 @@ private fun CompanyAvatar(iconString: String, onClick: () -> Unit) {
                 contentScale = ContentScale.Crop
             )
         } else {
-            val iconVector = try {
-                IconProvider.getIcon(value)
-            } catch (e: Exception) { Icons.Default.Business }
-
-            Icon(
-                imageVector = iconVector,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
+            val iconVector = try { IconProvider.getIcon(value) } catch (e: Exception) { Icons.Default.Business }
+            Icon(iconVector, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
         }
 
         Surface(
             modifier = Modifier.align(Alignment.BottomEnd).size(32.dp).clip(CircleShape),
-            color = MaterialTheme.colorScheme.primary,
-            tonalElevation = 4.dp
+            color = MaterialTheme.colorScheme.primary
         ) {
-            Icon(
-                imageVector = Icons.Default.Edit,
-                contentDescription = "Zmień",
-                modifier = Modifier.padding(6.dp),
-                tint = Color.White
-            )
+            Icon(Icons.Default.Edit, null, modifier = Modifier.padding(6.dp), tint = Color.White)
         }
     }
 }

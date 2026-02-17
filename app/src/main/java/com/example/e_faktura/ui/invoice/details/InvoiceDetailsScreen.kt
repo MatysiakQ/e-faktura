@@ -85,6 +85,11 @@ fun InvoiceDetailsScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        uiState.invoice?.let { navController.navigate("edit_invoice/${it.id}") }
+                    }) {
+                        Icon(Icons.Default.Edit, "Edytuj")
+                    }
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Icon(Icons.Default.Delete, "Usuń", tint = MaterialTheme.colorScheme.error)
                     }
