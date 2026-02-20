@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.example.e_faktura.ui.invoice.add
 
 import androidx.compose.foundation.layout.*
@@ -17,8 +19,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.e_faktura.ui.AppViewModelProvider
+import java.text.SimpleDateFormat
+import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddInvoiceScreen(
     navController: NavController,
@@ -29,11 +32,55 @@ fun AddInvoiceScreen(
     val companies by viewModel.savedCompanies.collectAsState()
 
     var expandedCompany by remember { mutableStateOf(false) }
-    var expandedVat by remember { mutableStateOf(false) }
+    var expandedVat     by remember { mutableStateOf(false) }
     var expandedPayment by remember { mutableStateOf(false) }
 
-    val isRevenue = state.type == "PRZYCHOD"
+    // BUG #9 FIX: DatePicker states
+    var showInvoiceDatePicker by remember { mutableStateOf(false) }
+    var showDueDatePicker     by remember { mutableStateOf(false) }
+
+    val invoiceDatePickerState = rememberDatePickerState(initialSelectedDateMillis = state.invoiceDate)
+    val dueDatePickerState     = rememberDatePickerState(initialSelectedDateMillis = state.dueDate)
+
+    val sdf = remember { SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()) }
+
+    val isRevenue  = state.type == "PRZYCHOD"
     val partyLabel = if (isRevenue) "Nabywca" else "Sprzedawca"
+
+    // Dialogi date pickerów
+    if (showInvoiceDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showInvoiceDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    invoiceDatePickerState.selectedDateMillis?.let { viewModel.updateInvoiceDate(it) }
+                    showInvoiceDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showInvoiceDatePicker = false }) { Text("Anuluj") }
+            }
+        ) {
+            DatePicker(state = invoiceDatePickerState)
+        }
+    }
+
+    if (showDueDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDueDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    dueDatePickerState.selectedDateMillis?.let { viewModel.updateDueDate(it) }
+                    showDueDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDueDatePicker = false }) { Text("Anuluj") }
+            }
+        ) {
+            DatePicker(state = dueDatePickerState)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -43,7 +90,7 @@ fun AddInvoiceScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Nowa faktura",
+            "Nowa faktura",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
@@ -75,6 +122,39 @@ fun AddInvoiceScreen(
             singleLine = true,
             isError = state.error?.contains("numer", true) == true
         )
+
+        // ─── Daty faktury (BUG #9 FIX) ───────────────────────────────────────
+        Text("Daty", style = MaterialTheme.typography.labelLarge)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedTextField(
+                value = sdf.format(Date(state.invoiceDate)),
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Data wystawienia") },
+                modifier = Modifier.weight(1f),
+                leadingIcon = { Icon(Icons.Default.Event, null) },
+                trailingIcon = {
+                    IconButton(onClick = { showInvoiceDatePicker = true }) {
+                        Icon(Icons.Default.EditCalendar, null)
+                    }
+                },
+                shape = RoundedCornerShape(12.dp)
+            )
+            OutlinedTextField(
+                value = sdf.format(Date(state.dueDate)),
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Termin płatności") },
+                modifier = Modifier.weight(1f),
+                leadingIcon = { Icon(Icons.Default.EventBusy, null) },
+                trailingIcon = {
+                    IconButton(onClick = { showDueDatePicker = true }) {
+                        Icon(Icons.Default.EditCalendar, null)
+                    }
+                },
+                shape = RoundedCornerShape(12.dp)
+            )
+        }
 
         // ─── Import z zapisanych firm ─────────────────────────────────────────
         Box(modifier = Modifier.fillMaxWidth()) {
@@ -159,11 +239,7 @@ fun AddInvoiceScreen(
 
         // ─── Stawka VAT ───────────────────────────────────────────────────────
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "Stawka VAT:",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.width(100.dp)
-            )
+            Text("Stawka VAT:", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(100.dp))
             Box {
                 OutlinedButton(
                     onClick = { expandedVat = true },
@@ -198,7 +274,7 @@ fun AddInvoiceScreen(
             } else null
         )
 
-        // ─── Podsumowanie kwot (auto-wyliczone) ───────────────────────────────
+        // ─── Podsumowanie kwot ────────────────────────────────────────────────
         if ((state.netAmountInput.toDoubleOrNull() ?: 0.0) > 0.0) {
             Card(
                 shape = RoundedCornerShape(12.dp),
@@ -213,22 +289,14 @@ fun AddInvoiceScreen(
                     AmountRow("Netto:", "${String.format("%.2f", state.netAmountInput.toDoubleOrNull() ?: 0.0)} PLN")
                     AmountRow("VAT ${if (state.vatRate == "ZW") "ZW" else "${state.vatRate}%"}:", "${String.format("%.2f", state.vatAmount)} PLN")
                     HorizontalDivider(thickness = 0.5.dp)
-                    AmountRow(
-                        label = "Brutto:",
-                        value = "${String.format("%.2f", state.grossAmount)} PLN",
-                        bold = true
-                    )
+                    AmountRow("Brutto:", "${String.format("%.2f", state.grossAmount)} PLN", bold = true)
                 }
             }
         }
 
         // ─── Forma płatności ──────────────────────────────────────────────────
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "Płatność:",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.width(100.dp)
-            )
+            Text("Płatność:", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(100.dp))
             Box {
                 OutlinedButton(
                     onClick = { expandedPayment = true },
@@ -248,8 +316,11 @@ fun AddInvoiceScreen(
             }
         }
 
-        // ─── Komunikat błędu ogólny ───────────────────────────────────────────
-        if (state.error != null && !state.error!!.contains("kwotę", true) && !state.error!!.contains("numer", true)) {
+        // ─── Błąd ogólny ─────────────────────────────────────────────────────
+        if (state.error != null &&
+            !state.error!!.contains("kwotę", true) &&
+            !state.error!!.contains("numer", true)
+        ) {
             Text(
                 text = state.error!!,
                 color = MaterialTheme.colorScheme.error,
@@ -268,10 +339,7 @@ fun AddInvoiceScreen(
             enabled = !state.isSaving
         ) {
             if (state.isSaving) {
-                CircularProgressIndicator(
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(24.dp)
-                )
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
             } else {
                 Icon(Icons.Default.Save, null)
                 Spacer(Modifier.width(8.dp))
@@ -285,19 +353,8 @@ fun AddInvoiceScreen(
 
 @Composable
 private fun AmountRow(label: String, value: String, bold: Boolean = false) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal
-        )
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal)
+        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal)
     }
 }

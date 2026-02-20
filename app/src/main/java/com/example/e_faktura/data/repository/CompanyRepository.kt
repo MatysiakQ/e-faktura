@@ -26,27 +26,37 @@ class CompanyRepository(
         }
     }
 
-    // ✅ NOWA FUNKCJA: Usuwanie firmy z Chmury i Lokalnie
+    // BUG #11 FIX: zachowaj userId z bazy jeśli EditCompanyViewModel go nie przekazał
     suspend fun updateCompany(company: Company) {
         val userId = firebaseAuth.currentUser?.uid
-        companyDao.update(company)
+
+        // Pobierz istniejącą firmę żeby zachować userId i inne metadane
+        val existing = companyDao.getCompanyById(company.id)
+        val companyWithUser = company.copy(
+            userId = userId ?: existing?.userId ?: company.userId
+        )
+
+        companyDao.update(companyWithUser)
+
         if (userId != null) {
             try {
-                firestore.collection("companies").document(company.id).set(company).await()
+                firestore.collection("companies")
+                    .document(companyWithUser.id)
+                    .set(companyWithUser)
+                    .await()
             } catch (e: Exception) {
-                // Lokalnie zapisano, Firebase sync po połączeniu
+                // Lokalnie zapisano — Firebase sync po przywróceniu połączenia
             }
         }
     }
 
     suspend fun deleteCompany(company: Company) {
         try {
-            // Usuwamy z Firestore
             firestore.collection("companies").document(company.id).delete().await()
-            // Usuwamy lokalnie z Room
             companyDao.delete(company)
         } catch (e: Exception) {
-            println("Error deleting company: ${e.message}")
+            // Jeśli Firebase nie odpowiada — usuń lokalnie, sync przy reconnect
+            companyDao.delete(company)
             throw e
         }
     }
@@ -63,7 +73,7 @@ class CompanyRepository(
                 companyDao.clearAll()
                 companies.forEach { companyDao.insert(it) }
             } catch (e: Exception) {
-                println("Error refreshing companies: ${e.message}")
+                // Zostają dane lokalne
             }
         }
     }

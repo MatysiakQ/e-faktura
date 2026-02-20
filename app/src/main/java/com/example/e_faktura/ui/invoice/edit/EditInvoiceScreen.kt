@@ -21,6 +21,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import java.text.SimpleDateFormat
+import java.util.*
 import com.example.e_faktura.ui.AppViewModelProvider
 import com.example.e_faktura.ui.invoice.add.PAYMENT_METHODS
 import com.example.e_faktura.ui.invoice.add.VAT_RATES
@@ -37,6 +39,13 @@ fun EditInvoiceScreen(
     var expandedVat     by remember { mutableStateOf(false) }
     var expandedPayment by remember { mutableStateOf(false) }
 
+    // BUG #9 FIX: date picker states
+    var showInvoiceDatePicker by remember { mutableStateOf(false) }
+    var showDueDatePicker     by remember { mutableStateOf(false) }
+    val invoiceDatePickerState = rememberDatePickerState(initialSelectedDateMillis = state.invoiceDate)
+    val dueDatePickerState     = rememberDatePickerState(initialSelectedDateMillis = state.dueDate)
+    val sdf = remember { SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()) }
+
     LaunchedEffect(Unit) {
         viewModel.events.collectLatest { event ->
             when (event) {
@@ -49,6 +58,31 @@ fun EditInvoiceScreen(
                 }
             }
         }
+    }
+
+    if (showInvoiceDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showInvoiceDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    invoiceDatePickerState.selectedDateMillis?.let { viewModel.updateInvoiceDate(it) }
+                    showInvoiceDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { showInvoiceDatePicker = false }) { Text("Anuluj") } }
+        ) { DatePicker(state = invoiceDatePickerState) }
+    }
+    if (showDueDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDueDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    dueDatePickerState.selectedDateMillis?.let { viewModel.updateDueDate(it) }
+                    showDueDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { showDueDatePicker = false }) { Text("Anuluj") } }
+        ) { DatePicker(state = dueDatePickerState) }
     }
 
     Scaffold(
@@ -98,6 +132,31 @@ fun EditInvoiceScreen(
                             onClick = { viewModel.updateType("KOSZT") },
                             shape = SegmentedButtonDefaults.itemShape(1, 2)
                         ) { Text("Koszt") }
+                    }
+
+                    // ─── Daty (BUG #9 FIX) ───────────────────────────────────────
+                    Text("Daty", style = MaterialTheme.typography.labelLarge)
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(
+                            value = sdf.format(Date(state.invoiceDate)),
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Data wystawienia") },
+                            modifier = Modifier.weight(1f),
+                            leadingIcon = { Icon(Icons.Default.Event, null) },
+                            trailingIcon = { IconButton(onClick = { showInvoiceDatePicker = true }) { Icon(Icons.Default.EditCalendar, null) } },
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        OutlinedTextField(
+                            value = sdf.format(Date(state.dueDate)),
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Termin płatności") },
+                            modifier = Modifier.weight(1f),
+                            leadingIcon = { Icon(Icons.Default.EventBusy, null) },
+                            trailingIcon = { IconButton(onClick = { showDueDatePicker = true }) { Icon(Icons.Default.EditCalendar, null) } },
+                            shape = RoundedCornerShape(12.dp)
+                        )
                     }
 
                     // ─── Numer faktury ───────────────────────────────────────

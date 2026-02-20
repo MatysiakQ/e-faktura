@@ -21,6 +21,9 @@ data class EditInvoiceUiState(
     val grossAmount: Double = 0.0,
     val serviceDescription: String = "",
     val paymentMethod: String = "PRZELEW",
+    // BUG #9 FIX: pola dat edytowalne
+    val invoiceDate: Long = System.currentTimeMillis(),
+    val dueDate: Long = System.currentTimeMillis() + 14 * 24 * 60 * 60 * 1000L,
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
     val notFound: Boolean = false,
@@ -71,6 +74,8 @@ class EditInvoiceViewModel(
                             grossAmount = if (invoice.grossAmount > 0) invoice.grossAmount else invoice.amount,
                             serviceDescription = invoice.serviceDescription,
                             paymentMethod = invoice.paymentMethod,
+                            invoiceDate = if (invoice.invoiceDate > 0) invoice.invoiceDate else System.currentTimeMillis(),
+                            dueDate = if (invoice.dueDate > 0) invoice.dueDate else System.currentTimeMillis() + 14 * 24 * 60 * 60 * 1000L,
                             isLoading = false
                         )
                     }
@@ -89,6 +94,9 @@ class EditInvoiceViewModel(
     fun updateType(t: String)         = _uiState.update { it.copy(type = t) }
     fun updateServiceDescription(d: String) = _uiState.update { it.copy(serviceDescription = d) }
     fun updatePaymentMethod(m: String) = _uiState.update { it.copy(paymentMethod = m) }
+    // BUG #9 FIX: metody dat
+    fun updateInvoiceDate(epochMs: Long) = _uiState.update { it.copy(invoiceDate = epochMs) }
+    fun updateDueDate(epochMs: Long)     = _uiState.update { it.copy(dueDate = epochMs) }
 
     fun updateNetAmount(input: String) {
         val net = input.toDoubleOrNull() ?: 0.0
@@ -130,6 +138,8 @@ class EditInvoiceViewModel(
                     amount = s.grossAmount,
                     serviceDescription = s.serviceDescription,
                     paymentMethod = s.paymentMethod,
+                    invoiceDate = s.invoiceDate,
+                    dueDate = s.dueDate,
                     // Reset KSeF jeśli edytujemy odrzuconą/lokalną — zaakceptowanej nie ruszamy
                     ksefStatus = if (original.ksefStatus == KsefStatus.ACCEPTED.name)
                         KsefStatus.ACCEPTED.name else KsefStatus.LOCAL.name,

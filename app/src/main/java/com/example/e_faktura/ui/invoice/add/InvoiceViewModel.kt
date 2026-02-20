@@ -25,6 +25,9 @@ data class InvoiceUiState(
     val grossAmount: Double = 0.0,
     val serviceDescription: String = "",
     val paymentMethod: String = "PRZELEW",
+    // BUG #9 FIX: pola dat z domyślnymi wartościami
+    val invoiceDate: Long = System.currentTimeMillis(),
+    val dueDate: Long = System.currentTimeMillis() + 14 * 24 * 60 * 60 * 1000L,
     val isSaving: Boolean = false,
     val isLoadingGus: Boolean = false,
     val error: String? = null
@@ -37,7 +40,7 @@ class InvoiceViewModel(
     private val invoiceRepository: InvoiceRepository,
     private val companyRepository: CompanyRepository,
     private val gusRepository: GusRepository,
-    private val ksefAuthManager: KsefAuthManager  // ← do pobrania danych sprzedawcy
+    private val ksefAuthManager: KsefAuthManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(InvoiceUiState())
@@ -58,6 +61,10 @@ class InvoiceViewModel(
     fun updateType(type: String)      = _uiState.update { it.copy(type = type) }
     fun updateServiceDescription(desc: String) = _uiState.update { it.copy(serviceDescription = desc) }
     fun updatePaymentMethod(method: String)    = _uiState.update { it.copy(paymentMethod = method) }
+
+    // BUG #9 FIX: metody aktualizacji dat
+    fun updateInvoiceDate(epochMs: Long) = _uiState.update { it.copy(invoiceDate = epochMs) }
+    fun updateDueDate(epochMs: Long)     = _uiState.update { it.copy(dueDate = epochMs) }
 
     fun updateNetAmount(input: String) {
         val net = input.toDoubleOrNull() ?: 0.0
@@ -112,10 +119,6 @@ class InvoiceViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true) }
             try {
-                val now = System.currentTimeMillis()
-                val twoWeeksMs = 14 * 24 * 60 * 60 * 1000L
-
-                // Pobierz dane sprzedawcy z ustawień KSeF
                 val sellerNip  = ksefAuthManager.getNip()
                 val sellerName = ksefAuthManager.companyNameFlow.first()
 
@@ -134,8 +137,8 @@ class InvoiceViewModel(
                     sellerName = sellerName,
                     serviceDescription = state.serviceDescription,
                     paymentMethod = state.paymentMethod,
-                    invoiceDate = now,
-                    dueDate = now + twoWeeksMs
+                    invoiceDate = state.invoiceDate,
+                    dueDate = state.dueDate
                 )
                 invoiceRepository.addInvoice(invoice)
                 onInvoiceAdded()

@@ -10,20 +10,19 @@ data class Company(
     @PrimaryKey
     val id: String = "",
     val nip: String = "",
-    val name: String? = null,
+    val name: String = "",
     val type: CompanyType = CompanyType.FIRM,
     val address: String = "",
     val postalCode: String = "",
     val city: String = "",
-    val ownerFullName: String? = null,
+    val ownerFullName: String = "",
     val bankAccount: String = "",
     val icon: String = "",
     val userId: String = ""
 ) {
-    //Logika sprawdzana w CompanyTest.kt
     val displayName: String
         get() = when (type) {
-            CompanyType.FIRM -> if (!name.isNullOrBlank()) name else "Brak nazwy"
-            CompanyType.SOLE_PROPRIETORSHIP -> if (!ownerFullName.isNullOrBlank()) ownerFullName else "Brak nazwy"
+            CompanyType.FIRM -> name.ifBlank { "Brak nazwy" }
+            CompanyType.SOLE_PROPRIETORSHIP -> ownerFullName.ifBlank { "Brak nazwy" }
         }
 }

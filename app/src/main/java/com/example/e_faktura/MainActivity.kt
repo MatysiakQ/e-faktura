@@ -28,7 +28,10 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-import androidx.navigation.compose.*
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.e_faktura.data.network.NetworkChangeReceiver
 import com.example.e_faktura.data.sync.SyncService
@@ -41,16 +44,17 @@ import com.example.e_faktura.ui.auth.RegistrationScreen
 import com.example.e_faktura.ui.company.add.AddCompanyScreen
 import com.example.e_faktura.ui.company.details.CompanyDetailsScreen
 import com.example.e_faktura.ui.company.edit.EditCompanyScreen
-import com.example.e_faktura.ui.invoice.edit.EditInvoiceScreen
 import com.example.e_faktura.ui.company.list.CompanyListScreen
 import com.example.e_faktura.ui.core.SplashScreen
 import com.example.e_faktura.ui.dashboard.StatisticsScreen
 import com.example.e_faktura.ui.invoice.add.AddInvoiceScreen
 import com.example.e_faktura.ui.invoice.details.InvoiceDetailsScreen
+import com.example.e_faktura.ui.invoice.edit.EditInvoiceScreen
 import com.example.e_faktura.ui.invoice.list.InvoiceDashboardScreen
 import com.example.e_faktura.ui.ksef.KsefSetupScreen
 import com.example.e_faktura.ui.navigation.Screen
 import com.example.e_faktura.ui.navigation.bottomNavItems
+import com.example.e_faktura.ui.navigation.shouldShowBars
 import com.example.e_faktura.ui.settings.SettingsScreen
 import com.example.e_faktura.ui.settings.SettingsViewModel
 import com.example.e_faktura.ui.theme.EfakturaTheme
@@ -62,14 +66,15 @@ class MainActivity : ComponentActivity() {
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { /* Wynik uprawnienia — obsłużony przez system */ }
+    ) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         checkNotificationPermission()
 
-        val syncIntent = Intent(this, SyncService::class.java)
-        startService(syncIntent)
+        if (savedInstanceState == null) {
+            startService(Intent(this, SyncService::class.java))
+        }
 
         networkReceiver = NetworkChangeReceiver { isOnline ->
             isNetworkAvailable.value = isOnline
@@ -77,7 +82,6 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
-            // SettingsViewModel zarządza motywem (jasny/ciemny)
             val settingsViewModel: SettingsViewModel = viewModel()
             val isDarkTheme by settingsViewModel.isDarkTheme.collectAsState()
 
@@ -86,7 +90,6 @@ class MainActivity : ComponentActivity() {
 
                 Surface(modifier = Modifier.fillMaxSize()) {
                     Column {
-                        // Baner braku internetu
                         if (!isNetworkAvailable.value) {
                             Card(
                                 modifier = Modifier.fillMaxWidth().padding(top = 40.dp),
@@ -170,7 +173,6 @@ fun AppScaffold(
     var showMenu by remember { mutableStateOf(false) }
     val isDarkTheme by settingsViewModel.isDarkTheme.collectAsState()
 
-    // Automatyczny powrót do logowania po wylogowaniu
     LaunchedEffect(user) {
         if (user == null) {
             rootNavController.navigate(Screen.Login.route) {
@@ -181,19 +183,9 @@ fun AppScaffold(
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val rootRoutes = remember { bottomNavItems.map { it.route } }
-
-    val isFullScreenRoute = currentRoute == Screen.AddCompany.route
-            || currentRoute == Screen.AddInvoice.route
-            || currentRoute == Screen.Settings.route
-            || currentRoute == Screen.KsefSetup.route
-            || currentRoute?.startsWith("company_details/") == true
-            || currentRoute?.startsWith("edit_company/") == true
-            || currentRoute?.startsWith("edit_invoice/") == true
-            || currentRoute?.startsWith("invoice_details/") == true
-            || currentRoute == "account"
-
-    val showGlobalBars = currentRoute in rootRoutes && !isFullScreenRoute
+    
+    // FIX BUG #3: Dynamiczne sprawdzanie widoczności paska zamiast twardej listy
+    val showGlobalBars = currentRoute.shouldShowBars()
     val isLoggedIn = user != null && !user!!.isAnonymous
 
     Scaffold(
@@ -301,7 +293,6 @@ fun AppScaffold(
             composable("account") {
                 MyAccountScreen(navController = navController)
             }
-            // ─── Ustawienia ────────────────────────────────────────────────
             composable(Screen.Settings.route) {
                 SettingsScreen(
                     navController = navController,
@@ -309,7 +300,6 @@ fun AppScaffold(
                     onThemeChange = { settingsViewModel.setDarkTheme(it) }
                 )
             }
-            // ─── KSeF Setup ────────────────────────────────────────────────
             composable(Screen.KsefSetup.route) {
                 KsefSetupScreen(navController = navController)
             }

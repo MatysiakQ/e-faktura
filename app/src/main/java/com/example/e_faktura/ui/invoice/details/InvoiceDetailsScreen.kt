@@ -164,7 +164,9 @@ fun InvoiceDetailsScreen(
                     )
                     DetailRow(
                         Icons.Default.EventBusy, "Termin płatności",
-                        SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(invoice.dueDate))
+                        if (invoice.dueDate > 0)
+                            SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(invoice.dueDate))
+                        else "Nie ustawiono"
                     )
                     if (invoice.serviceDescription.isNotBlank()) {
                         DetailRow(Icons.Default.Description, "Opis", invoice.serviceDescription)

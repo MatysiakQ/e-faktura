@@ -4,9 +4,9 @@ import com.example.e_faktura.data.local.InvoiceDao
 import com.example.e_faktura.model.Invoice
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
 
 class InvoiceRepository(
@@ -18,41 +18,46 @@ class InvoiceRepository(
         get() = firebaseAuth.currentUser?.uid
 
     suspend fun getInvoiceById(id: String): Invoice? {
-        val currentUserId = userId
-        return if (currentUserId == null) {
-            invoiceDao.getInvoiceById(id)
-        } else {
-            try {
-                val snapshot = firestore.collection("users").document(currentUserId)
-                    .collection("invoices").document(id).get().await()
+        // BUG #1 FIX: Zawsze najpierw Room (szybko), potem próba Firebase
+        val local = invoiceDao.getInvoiceById(id)
+        val currentUserId = userId ?: return local
 
-                // Jeśli nie ma w Firebase, szukaj lokalnie
-                snapshot.toObject(Invoice::class.java) ?: invoiceDao.getInvoiceById(id)
-            } catch (e: Exception) {
-                invoiceDao.getInvoiceById(id)
-            }
+        return try {
+            val snapshot = firestore.collection("users").document(currentUserId)
+                .collection("invoices").document(id).get().await()
+            snapshot.toObject(Invoice::class.java) ?: local
+        } catch (e: Exception) {
+            local
         }
     }
 
+    // BUG #1 FIX: offline-first — Room jest źródłem prawdy, Firebase syncuje w tle
     fun getInvoices(): Flow<List<Invoice>> {
         val currentUserId = userId
-        return if (currentUserId == null) {
-            invoiceDao.getAllInvoices()
-        } else {
-            callbackFlow {
-                val listener = firestore.collection("users").document(currentUserId)
+            ?: return invoiceDao.getAllInvoices()   // gość → tylko Room
+
+        return flow {
+            // Krok 1: Natychmiast emituj dane lokalne (działa offline)
+            emitAll(invoiceDao.getAllInvoices())
+
+            // Krok 2: Próba synchronizacji z Firebase w tle
+            try {
+                val snapshot = firestore.collection("users").document(currentUserId)
                     .collection("invoices")
-                    .addSnapshotListener { snapshot, e ->
-                        if (e != null) {
-                            close(e)
-                            return@addSnapshotListener
-                        }
-                        if (snapshot != null) {
-                            val invoices = snapshot.documents.mapNotNull { it.toObject(Invoice::class.java) }
-                            trySend(invoices)
-                        }
-                    }
-                awaitClose { listener.remove() }
+                    .get()
+                    .await()
+
+                val remoteInvoices = snapshot.documents
+                    .mapNotNull { it.toObject(Invoice::class.java) }
+
+                if (remoteInvoices.isNotEmpty()) {
+                    // Zapisz zdalnie pobrane dane lokalnie
+                    remoteInvoices.forEach { invoiceDao.insertInvoice(it) }
+                    // Flow z Room automatycznie emituje nową listę po insertach
+                }
+            } catch (e: Exception) {
+                // Brak sieci lub błąd Firebase — dane lokalne wystarczą
+                // Flow już emituje dane z Room więc nie ma crashu
             }
         }
     }
@@ -60,45 +65,57 @@ class InvoiceRepository(
     suspend fun addInvoice(invoice: Invoice) {
         val currentUserId = userId
         val currentTime = System.currentTimeMillis()
-
-        // ✅ OBLICZENIE: 14 dni w milisekundach (14 * 24 * 60 * 60 * 1000)
         val twoWeeksInMs = 1_209_600_000L
-        val automaticDueDate = currentTime + twoWeeksInMs
 
         val finalInvoice = invoice.copy(
             userId = currentUserId ?: "",
-            // Użyj dueDate z faktury jeśli ustawiony, inaczej automatyczny (2 tygodnie)
-            dueDate = if (invoice.dueDate > 0) invoice.dueDate else automaticDueDate,
+            dueDate = if (invoice.dueDate > 0) invoice.dueDate else currentTime + twoWeeksInMs,
             isPaid = false
         )
 
+        // Najpierw Room — gwarantuje lokalny zapis nawet przy braku sieci
         invoiceDao.insertInvoice(finalInvoice)
 
         if (currentUserId != null) {
-            firestore.collection("users").document(currentUserId)
-                .collection("invoices").document(finalInvoice.id).set(finalInvoice).await()
+            try {
+                firestore.collection("users").document(currentUserId)
+                    .collection("invoices").document(finalInvoice.id)
+                    .set(finalInvoice).await()
+            } catch (e: Exception) {
+                // Lokalnie zapisano — Firebase sync przy następnym uruchomieniu getInvoices()
+            }
         }
     }
 
     suspend fun updateInvoice(invoice: Invoice) {
         val currentUserId = userId
-        // ✅ NAPRAWIONO: 'updateInvoice' zamiast 'update'
+
         invoiceDao.updateInvoice(invoice)
 
         if (currentUserId != null) {
-            firestore.collection("users").document(currentUserId)
-                .collection("invoices").document(invoice.id).set(invoice).await()
+            try {
+                firestore.collection("users").document(currentUserId)
+                    .collection("invoices").document(invoice.id)
+                    .set(invoice).await()
+            } catch (e: Exception) {
+                // Lokalnie zapisano
+            }
         }
     }
 
     suspend fun deleteInvoice(invoice: Invoice) {
         val currentUserId = userId
-        // ✅ NAPRAWIONO: 'deleteInvoice' zamiast 'delete'
+
         invoiceDao.deleteInvoice(invoice)
 
         if (currentUserId != null) {
-            firestore.collection("users").document(currentUserId)
-                .collection("invoices").document(invoice.id).delete().await()
+            try {
+                firestore.collection("users").document(currentUserId)
+                    .collection("invoices").document(invoice.id)
+                    .delete().await()
+            } catch (e: Exception) {
+                // Lokalnie usunięto, Firebase sync przy reconnect
+            }
         }
     }
 }

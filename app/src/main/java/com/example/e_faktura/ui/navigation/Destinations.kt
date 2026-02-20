@@ -6,11 +6,16 @@ import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.ui.graphics.vector.ImageVector
 
-sealed class Screen(val route: String, val label: String? = null, val icon: ImageVector? = null) {
+sealed class Screen(
+    val route: String,
+    val label: String? = null,
+    val icon: ImageVector? = null,
+    val showBars: Boolean = false
+) {
     // ─── Główne ekrany (bottom nav) ───────────────────────────────────────────
-    object Home : Screen("home", "Pulpit", Icons.Filled.Dashboard)
-    object Companies : Screen("companies", "Moje Firmy", Icons.Filled.Business)
-    object Statistics : Screen("statistics", "Statystyki", Icons.Filled.PieChart)
+    object Home : Screen("home", "Pulpit", Icons.Filled.Dashboard, showBars = true)
+    object Companies : Screen("companies", "Moje Firmy", Icons.Filled.Business, showBars = true)
+    object Statistics : Screen("statistics", "Statystyki", Icons.Filled.PieChart, showBars = true)
 
     // ─── Operacje na danych ───────────────────────────────────────────────────
     object AddInvoice : Screen("add_invoice")
@@ -33,5 +38,14 @@ sealed class Screen(val route: String, val label: String? = null, val icon: Imag
     object LoginFlow : Screen("login_flow")
 }
 
-/** Elementy wyświetlane w dolnym pasku nawigacji */
 val bottomNavItems = listOf(Screen.Home, Screen.Companies, Screen.Statistics)
+
+fun String?.shouldShowBars(): Boolean {
+    return when {
+        this == null -> false
+        this == Screen.Home.route -> true
+        this == Screen.Companies.route -> true
+        this == Screen.Statistics.route -> true
+        else -> false
+    }
+}
