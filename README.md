@@ -15,15 +15,14 @@ Aplikacja umożliwia szybkie wystawianie faktur, zarządzanie kontrahentami oraz
 # 📱 Zrzuty Ekranu
 
 <p align="center">
-  <img src="screenshots/dashboard.png" width="250"/>
-  <img src="screenshots/invoice_creator.png" width="250"/>
-  <img src="screenshots/contractors.png" width="250"/>
+  <img src="0294a5b7-e8f2-4624-92a7-3e9699f43ab5.jpg" width="250"/>
+  <img src="65e7ef2f-3712-4931-81cc-a17acaf34f0d.jpg" width="250"/>
+  <img src="8923e116-4024-433b-8d0a-a5b6919ac01e.jpg" width="250"/>
 </p>
 
 <p align="center">
-  <img src="screenshots/invoice_preview.png" width="250"/>
-  <img src="screenshots/expenses.png" width="250"/>
-  <img src="screenshots/statistics.png" width="250"/>
+  <img src="a3214936-d71b-43a9-9a9d-84f5a6f4d70a.jpg" width="250"/>
+  <img src="e38a5757-9470-4c0e-bf50-ba36fb6e0195.jpg" width="250"/>
 </p>
 
 ---
